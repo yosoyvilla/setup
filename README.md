@@ -379,28 +379,43 @@ curl -o ~/.zsh/catppuccin_mocha-zsh-syntax-highlighting.zsh \
 
 ### 4.2 Terminal Enhancement Tools
 
-These tools make the terminal significantly more productive. Install them and add the configuration below to `~/.zshrc`.
+**What this gives you:** fuzzy search wired into every tab completion, syntax-highlighted file output, smarter `cd` that remembers where you go, searchable shell history with a full UI, and better `ls`/`diff`/`git` output.
 
-#### Install
+**Tools at a glance:**
+
+| Tool | Replaces | What it does |
+|------|----------|-------------|
+| `fzf` | nothing (adds) | Fuzzy finder — press CTRL-R, CTRL-T, or Tab and get an interactive picker |
+| `fzf-tab` | default tab completion | Wires fzf into zsh Tab key — all completions (files, commands, git branches, kubectl pods…) go through fzf |
+| `bat` | `cat` | Shows file contents with syntax highlighting and line numbers |
+| `fd` | `find` | Faster file search, respects `.gitignore` |
+| `rg` (ripgrep) | `grep` | Faster code search, respects `.gitignore` |
+| `eza` | `ls` | File listing with icons, git status, tree mode |
+| `delta` | raw git diff | Git diffs with syntax highlighting and side-by-side mode |
+| `zoxide` | `cd` | Smart `cd` — learns your most-visited dirs, jump with `z partial-name` |
+| `atuin` | CTRL-R history | Full-text shell history search with a TUI, optional cloud sync |
+
+---
+
+#### Step 1 — Install tools
 
 **macOS:**
 ```bash
 brew install fzf bat fd ripgrep eza delta zoxide atuin
-# oh-my-zsh plugins (add to plugins=(...) in .zshrc):
-# zsh-autosuggestions and zsh-syntax-highlighting via Homebrew:
 brew install zsh-autosuggestions zsh-syntax-highlighting
 ```
 
-**Debian/Ubuntu:**
+**Debian / Ubuntu:**
 ```bash
 sudo apt update && sudo apt install -y fzf bat fd-find ripgrep
-# Note: on Ubuntu, fd is installed as fdfind — alias it:
-# alias fd=fdfind
-# Install eza, delta, zoxide, atuin via cargo or their install scripts:
-cargo install eza   # or: sudo apt install eza (Ubuntu 24.04+)
-cargo install git-delta
+# Note: fd is named "fdfind" on Ubuntu — add alias below in Step 4
+# eza, delta, zoxide, atuin are not in apt (install via cargo or install scripts):
+cargo install eza                   # Ubuntu 24.04+: sudo apt install eza
+cargo install git-delta             # the binary is called "delta"
 curl -sSf https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+# zsh plugins:
+sudo apt install -y zsh-autosuggestions zsh-syntax-highlighting
 ```
 
 **Fedora:**
@@ -409,63 +424,131 @@ sudo dnf install -y fzf bat fd-find ripgrep
 cargo install eza git-delta
 curl -sSf https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+sudo dnf install -y zsh-autosuggestions zsh-syntax-highlighting
 ```
 
-#### Add to `~/.zshrc`
+**Install Rust/cargo** (needed for eza, delta on Linux if not already present):
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+```
+
+---
+
+#### Step 2 — Install fzf-tab (oh-my-zsh plugin)
+
+`fzf-tab` replaces the default zsh tab completion with an fzf picker. This is what makes pressing Tab open an interactive fuzzy menu for files, git branches, kubectl resources, etc.
+
+```bash
+git clone https://github.com/Aloxaf/fzf-tab \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/fzf-tab
+```
+
+If you don't use oh-my-zsh, add this to `~/.zshrc` after `compinit`:
+```bash
+# Manual fzf-tab (no oh-my-zsh):
+source ~/path/to/fzf-tab/fzf-tab.plugin.zsh
+```
+
+---
+
+#### Step 3 — Update oh-my-zsh plugins list
+
+**Order matters.** `fzf-tab` must come before `zsh-autosuggestions`. `zsh-syntax-highlighting` must be last.
+
+In `~/.zshrc`, find the `plugins=(...)` line and replace it:
 
 ```zsh
-# ── fzf shell integration (CTRL-R history, CTRL-T file, ALT-C dir) ──
-# Modern fzf (0.48+):
+plugins=(
+  git
+  colored-man-pages
+  colorize
+  kubectl
+  fzf-tab               # tab completion via fzf — must be before zsh-autosuggestions
+  zsh-autosuggestions   # fish-like inline command suggestions
+  zsh-syntax-highlighting  # command highlighting — must be last
+)
+
+# macOS: add these two:
+# brew macos
+```
+
+> **For AI agents:** The `brew` and `macos` plugins are macOS-only. On Linux, remove them or they cause errors. `fzf-tab` must always precede `zsh-autosuggestions` in this list — reversing the order breaks suggestion display.
+
+---
+
+#### Step 4 — Add to `~/.zshrc` (after `source $ZSH/oh-my-zsh.sh`)
+
+Paste this block at the end of `~/.zshrc`, after the `source $ZSH/oh-my-zsh.sh` line:
+
+```zsh
+# ── fzf shell integration ────────────────────────────────────────────
+# Enables CTRL-R (history), CTRL-T (file picker), ALT-C (dir picker)
+# Run: fzf --version → if 0.48+, use eval form. If older, use the source form.
 eval "$(fzf --zsh)"
-# Legacy (if ~/.fzf.zsh exists from `brew install fzf && $(brew --prefix)/opt/fzf/install`):
+# Fallback for older fzf installed via brew's install script:
 # [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# Use ripgrep as fzf source (respects .gitignore, fast)
+# Use ripgrep as fzf's file source (fast, respects .gitignore)
 export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git"'
+
+# fzf appearance and behavior
 export FZF_DEFAULT_OPTS="
   --layout=reverse
   --height=50%
   --preview 'bat --color=always --style=numbers --line-range=:100 {}'
   --preview-window=right:50%:hidden
   --bind 'ctrl-/:toggle-preview'
-  --bind 'ctrl-y:execute-silent(echo -n {} | pbcopy)'
 "
-export FZF_CTRL_T_OPTS="$FZF_DEFAULT_OPTS"
+# macOS: add clipboard copy binding
+# --bind 'ctrl-y:execute-silent(echo -n {} | pbcopy)'
+
+# Directory picker shows a tree preview
 export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -100'"
+
+# History search: no preview panel needed
 export FZF_CTRL_R_OPTS="--preview-window=hidden"
 
-# ── bat (better cat) ─────────────────────────────────────────────────
-export BAT_THEME="Catppuccin Mocha"
-alias cat='bat --paging=never'
-alias catp='bat'  # with paging
+# fzf-tab: show file previews in tab completions too
+zstyle ':fzf-tab:complete:*' fzf-preview 'bat --color=always --line-range=:50 $realpath 2>/dev/null || eza --color=always $realpath 2>/dev/null'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --color=always $realpath | head -50'
+zstyle ':fzf-tab:complete:kill:argument-rest' fzf-preview 'ps --pid=$word -o cmd --no-header -w -w'
 
-# ── eza (better ls) ──────────────────────────────────────────────────
+# ── bat (better cat — syntax highlighting) ──────────────────────────
+export BAT_THEME="Catppuccin Mocha"
+alias cat='bat --paging=never'    # drop-in cat replacement
+alias catp='bat'                  # cat with paging
+
+# ── eza (better ls — icons, git status, tree) ───────────────────────
 alias ls='eza --icons --group-directories-first'
 alias ll='eza -la --icons --group-directories-first --git'
 alias lt='eza --tree --icons -L 2'
 alias la='eza -la --icons'
 
-# ── zoxide (smarter cd — learns your most-used dirs) ─────────────────
+# ── fd (better find — respects .gitignore) ──────────────────────────
+# Ubuntu/Fedora: fd is installed as "fdfind", alias it:
+# alias fd=fdfind
+
+# ── zoxide (smart cd — learns most-visited dirs) ─────────────────────
 eval "$(zoxide init zsh)"
-# Usage: z <partial-path>  →  jumps to best match
+# Usage: z foo     → jumps to best matching dir containing "foo"
+#        zi        → interactive picker for all visited dirs
 
-# ── atuin (shell history with sync + search UI) ──────────────────────
+# ── atuin (searchable shell history with TUI) ────────────────────────
+# CTRL-R opens atuin's search UI (overrides fzf's CTRL-R binding)
+# First time: run `atuin register` to enable sync, or skip for local-only
 eval "$(atuin init zsh)"
-# CTRL-R opens atuin's full-text history search (replaces fzf CTRL-R)
 
-# ── delta (better git diff) ──────────────────────────────────────────
-# Add to ~/.gitconfig:
-#   [core]
-#     pager = delta
-#   [interactive]
-#     diffFilter = delta --color-only
-#   [delta]
-#     navigate = true
-#     side-by-side = true
-#     line-numbers = true
+# ── delta (better git diff — configured in ~/.gitconfig) ────────────
+# See Step 5 below — no code needed here, gitconfig handles it
 ```
 
-**Configure delta in `~/.gitconfig`:**
+---
+
+#### Step 5 — Configure delta in `~/.gitconfig`
+
+Delta replaces git's pager for all `git diff`, `git log -p`, `git show`, and interactive add output.
+
 ```ini
 [core]
     pager = delta
@@ -474,24 +557,63 @@ eval "$(atuin init zsh)"
     diffFilter = delta --color-only
 
 [delta]
-    navigate = true
-    side-by-side = true
+    navigate = true        # n/N to jump between diff sections
+    side-by-side = true    # two-column diff view
     line-numbers = true
     syntax-theme = Catppuccin Mocha
 ```
 
-#### Tool Summary
+Apply with:
+```bash
+git config --global core.pager delta
+git config --global interactive.diffFilter "delta --color-only"
+git config --global delta.navigate true
+git config --global delta.side-by-side true
+git config --global delta.line-numbers true
+git config --global delta.syntax-theme "Catppuccin Mocha"
+```
 
-| Tool | Purpose | Key binding / usage |
-|------|---------|-------------------|
-| `fzf` | Fuzzy finder for files, commands, history | CTRL-R (history), CTRL-T (files), ALT-C (dirs) |
-| `bat` | Syntax-highlighted `cat` with line numbers | `cat file` (aliased) |
-| `fd` | Faster `find`, respects .gitignore | `fd pattern` |
-| `rg` | Faster `grep` for code search | `rg 'pattern' path/` |
-| `eza` | Better `ls` with icons, git status, tree | `ls`, `ll`, `lt` (aliased) |
-| `delta` | Syntax-highlighted git diffs | Automatic via gitconfig |
-| `zoxide` | Smart `cd` that learns your dirs | `z partial-name` |
-| `atuin` | Searchable shell history with UI | CTRL-R |
+---
+
+#### Step 6 — Verify
+
+Run these to confirm everything works:
+
+```bash
+fzf --version                  # should be 0.48+
+bat --version
+fd --version                   # or: fdfind --version on Ubuntu
+rg --version
+eza --version
+delta --version
+zoxide --version
+atuin --version
+
+# Test fzf integration:
+# Press CTRL-R in terminal  → atuin history search UI
+# Press CTRL-T              → fzf file picker
+# Press ALT-C               → fzf directory picker
+# Press Tab after a command → fzf tab completion (fzf-tab)
+# Type: z doc<Tab>          → jumps to ~/Documents (after visiting it once)
+```
+
+---
+
+#### Complete Tool Reference
+
+| Tool | Key binding / command | What happens |
+|------|----------------------|-------------|
+| `fzf` | CTRL-T | Fuzzy file picker — inserts selected path at cursor |
+| `fzf` | ALT-C | Fuzzy dir picker — `cd`s into selected directory |
+| `atuin` | CTRL-R | Full-text history search with TUI (replaces fzf CTRL-R) |
+| `fzf-tab` | Tab | All tab completions go through fzf picker |
+| `bat` | `cat <file>` | Syntax-highlighted file output with line numbers |
+| `fd` | `fd pattern` | Find files matching pattern, ignoring `.gitignore` |
+| `rg` | `rg 'pattern'` | Grep across code, ignoring `.gitignore` |
+| `eza` | `ls`, `ll`, `lt` | File listing with icons, git status, tree view |
+| `delta` | `git diff`, `git log -p` | Syntax-highlighted side-by-side diffs |
+| `zoxide` | `z partial-name` | Jump to most-visited dir matching name |
+| `zoxide` | `zi` | Interactive picker for all visited directories |
 
 ---
 
