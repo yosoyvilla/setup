@@ -12,6 +12,7 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
 2. [Platform Notes](#2-platform-notes)
 3. [System Prerequisites](#3-system-prerequisites)
 4. [Shell Environment](#4-shell-environment)
+   - [Terminal Enhancement Tools](#42-terminal-enhancement-tools)
 5. [Claude Code](#5-claude-code)
    - [Installation](#51-installation)
    - [Global Config (CLAUDE.md)](#52-global-config-claudemd)
@@ -26,6 +27,9 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
    - [oh-my-openagent Config](#63-oh-my-openagent-config)
    - [TUI and Legacy Config](#64-tui-and-legacy-config)
 7. [Zed IDE](#7-zed-ide)
+   - [Installation](#71-installation)
+   - [Config](#72-config)
+   - [Skills](#73-zed-skills)
 8. [Obsidian Vault](#8-obsidian-vault)
 9. [Environment Variables](#9-environment-variables)
 10. [Projects Structure](#10-projects-structure)
@@ -372,6 +376,122 @@ mkdir -p ~/.zsh
 curl -o ~/.zsh/catppuccin_mocha-zsh-syntax-highlighting.zsh \
   https://raw.githubusercontent.com/catppuccin/zsh-syntax-highlighting/main/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh
 ```
+
+### 4.2 Terminal Enhancement Tools
+
+These tools make the terminal significantly more productive. Install them and add the configuration below to `~/.zshrc`.
+
+#### Install
+
+**macOS:**
+```bash
+brew install fzf bat fd ripgrep eza delta zoxide atuin
+# oh-my-zsh plugins (add to plugins=(...) in .zshrc):
+# zsh-autosuggestions and zsh-syntax-highlighting via Homebrew:
+brew install zsh-autosuggestions zsh-syntax-highlighting
+```
+
+**Debian/Ubuntu:**
+```bash
+sudo apt update && sudo apt install -y fzf bat fd-find ripgrep
+# Note: on Ubuntu, fd is installed as fdfind — alias it:
+# alias fd=fdfind
+# Install eza, delta, zoxide, atuin via cargo or their install scripts:
+cargo install eza   # or: sudo apt install eza (Ubuntu 24.04+)
+cargo install git-delta
+curl -sSf https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+```
+
+**Fedora:**
+```bash
+sudo dnf install -y fzf bat fd-find ripgrep
+cargo install eza git-delta
+curl -sSf https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+```
+
+#### Add to `~/.zshrc`
+
+```zsh
+# ── fzf shell integration (CTRL-R history, CTRL-T file, ALT-C dir) ──
+# Modern fzf (0.48+):
+eval "$(fzf --zsh)"
+# Legacy (if ~/.fzf.zsh exists from `brew install fzf && $(brew --prefix)/opt/fzf/install`):
+# [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# Use ripgrep as fzf source (respects .gitignore, fast)
+export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git"'
+export FZF_DEFAULT_OPTS="
+  --layout=reverse
+  --height=50%
+  --preview 'bat --color=always --style=numbers --line-range=:100 {}'
+  --preview-window=right:50%:hidden
+  --bind 'ctrl-/:toggle-preview'
+  --bind 'ctrl-y:execute-silent(echo -n {} | pbcopy)'
+"
+export FZF_CTRL_T_OPTS="$FZF_DEFAULT_OPTS"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -100'"
+export FZF_CTRL_R_OPTS="--preview-window=hidden"
+
+# ── bat (better cat) ─────────────────────────────────────────────────
+export BAT_THEME="Catppuccin Mocha"
+alias cat='bat --paging=never'
+alias catp='bat'  # with paging
+
+# ── eza (better ls) ──────────────────────────────────────────────────
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -la --icons --group-directories-first --git'
+alias lt='eza --tree --icons -L 2'
+alias la='eza -la --icons'
+
+# ── zoxide (smarter cd — learns your most-used dirs) ─────────────────
+eval "$(zoxide init zsh)"
+# Usage: z <partial-path>  →  jumps to best match
+
+# ── atuin (shell history with sync + search UI) ──────────────────────
+eval "$(atuin init zsh)"
+# CTRL-R opens atuin's full-text history search (replaces fzf CTRL-R)
+
+# ── delta (better git diff) ──────────────────────────────────────────
+# Add to ~/.gitconfig:
+#   [core]
+#     pager = delta
+#   [interactive]
+#     diffFilter = delta --color-only
+#   [delta]
+#     navigate = true
+#     side-by-side = true
+#     line-numbers = true
+```
+
+**Configure delta in `~/.gitconfig`:**
+```ini
+[core]
+    pager = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    side-by-side = true
+    line-numbers = true
+    syntax-theme = Catppuccin Mocha
+```
+
+#### Tool Summary
+
+| Tool | Purpose | Key binding / usage |
+|------|---------|-------------------|
+| `fzf` | Fuzzy finder for files, commands, history | CTRL-R (history), CTRL-T (files), ALT-C (dirs) |
+| `bat` | Syntax-highlighted `cat` with line numbers | `cat file` (aliased) |
+| `fd` | Faster `find`, respects .gitignore | `fd pattern` |
+| `rg` | Faster `grep` for code search | `rg 'pattern' path/` |
+| `eza` | Better `ls` with icons, git status, tree | `ls`, `ll`, `lt` (aliased) |
+| `delta` | Syntax-highlighted git diffs | Automatic via gitconfig |
+| `zoxide` | Smart `cd` that learns your dirs | `z partial-name` |
+| `atuin` | Searchable shell history with UI | CTRL-R |
 
 ---
 
@@ -1552,7 +1672,7 @@ opencode debug agent "Sisyphus - ultraworker" | python3 -c \
 
 ## 7. Zed IDE
 
-> **No agents or skills in Zed.** Zed has no concept of domain agents or skills — it is a code editor with an AI assistant panel, not a multi-agent framework. Its AI capabilities come entirely from the model configured in `settings.json`. You select a model and chat directly with it. For structured DevOps workflows, use Claude Code. For autonomous multi-step coding tasks, use opencode. Use Zed for fast inline edits and its AI panel when you want a lightweight, editor-native experience.
+Zed is the primary code editor. Its AI Agent panel has a **skills system** (`~/.agents/skills/`) — reusable instruction packages the agent auto-invokes based on context. Skills are plain Markdown, work with any model, and complement the Claude Code agent system (they are completely separate). For structured DevOps workflows use Claude Code; for autonomous multi-step coding use opencode; use Zed for fast inline editing and its AI panel with the skills below.
 
 ### 7.1 Installation
 
@@ -1633,6 +1753,45 @@ File: `~/.config/zed/settings.json`
 ```
 
 After writing this file, add the NaN API key in Zed's UI: open Zed → `Cmd+,` (macOS) or `Ctrl+,` (Linux) → Extensions → AI → OpenAI → set the API key to your `NAN_API_KEY` value.
+
+### 7.3 Zed Skills
+
+Skills live in `~/.agents/skills/<name>/SKILL.md` (global, all projects) or `<project>/.agents/skills/<name>/SKILL.md` (project-local). The agent auto-discovers them and selects them by matching task context to the skill's `description`. You can also invoke manually with `/skill-name` or `@skill-name` in the agent panel.
+
+**Install the skills from this repo:**
+
+```bash
+mkdir -p ~/.agents/skills
+# Copy each skill folder:
+cp -r zed-skills/karpathy-guidelines ~/.agents/skills/karpathy-guidelines
+cp -r zed-skills/terraform-devops ~/.agents/skills/terraform-devops
+cp -r zed-skills/k8s-debug ~/.agents/skills/k8s-debug
+cp -r zed-skills/incident-triage ~/.agents/skills/incident-triage
+cp -r zed-skills/spec-first ~/.agents/skills/spec-first
+```
+
+> **Note:** Each folder in this repo's `zed-skills/` is a flat `.md` file. Rename it to `SKILL.md` inside the skill folder:
+> ```bash
+> for skill in zed-skills/*.md; do
+>   name=$(basename "$skill" .md)
+>   mkdir -p ~/.agents/skills/$name
+>   cp "$skill" ~/.agents/skills/$name/SKILL.md
+> done
+> ```
+
+**Installed skills:**
+
+| Skill | Auto-invoked when... |
+|-------|---------------------|
+| `karpathy-guidelines` | Writing, reviewing, or refactoring code |
+| `terraform-devops` | Working with `.tf` files or planning infra changes |
+| `k8s-debug` | Diagnosing pod failures, ArgoCD sync issues, HPA problems |
+| `incident-triage` | Investigating outages, errors, or security alerts |
+| `spec-first` | Planning a non-trivial code or infra change |
+
+**Verify installation:**
+
+Zed → `Cmd+,` → AI → Skills → User tab — all 5 skills should appear.
 
 ---
 
@@ -1833,6 +1992,16 @@ Copy this list and check off each item:
 - [ ] Installed
 - [ ] `~/.config/zed/settings.json` created
 - [ ] NaN API key set in Zed settings UI
+- [ ] Zed skills installed: `ls ~/.agents/skills/` → shows 5+ skill folders
+- [ ] Skills visible in Zed → Settings → AI → Skills → User tab
+
+**Terminal Tools**
+- [ ] `fzf` installed and CTRL-R works in terminal
+- [ ] `bat --version` works
+- [ ] `rg --version` works
+- [ ] `eza --version` works (or at least `ls` alias configured)
+- [ ] `zoxide` init in `.zshrc` (`z` command works)
+- [ ] `delta` in `~/.gitconfig` (`git diff` shows colored output)
 
 **Environment**
 - [ ] `NAN_API_KEY` in `~/.zshrc`
