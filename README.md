@@ -8,33 +8,84 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
 
 ## Table of Contents
 
-1. [Platform Notes](#1-platform-notes)
-2. [System Prerequisites](#2-system-prerequisites)
-3. [Shell Environment](#3-shell-environment)
-4. [Claude Code](#4-claude-code)
-   - [Installation](#41-installation)
-   - [Global Config (CLAUDE.md)](#42-global-config-claudemd)
-   - [Settings (hooks, plugins, model)](#43-settings-json)
-   - [Agents](#44-agents)
-   - [Skills](#45-skills)
-   - [Rules](#46-rules)
-   - [Auto-Sync Hook Script](#47-auto-sync-hook-script)
-5. [opencode CLI](#5-opencode-cli)
+1. [Two AI Assistants — Architecture Overview](#1-two-ai-assistants--architecture-overview)
+2. [Platform Notes](#2-platform-notes)
+3. [System Prerequisites](#3-system-prerequisites)
+4. [Shell Environment](#4-shell-environment)
+5. [Claude Code](#5-claude-code)
    - [Installation](#51-installation)
-   - [Main Config](#52-main-config-opencodejsonc)
-   - [oh-my-openagent Config](#53-oh-my-openagent-config)
-   - [TUI and Legacy Config](#54-tui-and-legacy-config)
-6. [Zed IDE](#6-zed-ide)
-7. [Obsidian Vault](#7-obsidian-vault)
-8. [Environment Variables](#8-environment-variables)
-9. [Projects Structure](#9-projects-structure)
-10. [Quick Reference](#10-quick-reference)
-11. [Post-Install Checklist](#11-post-install-checklist)
-12. [Troubleshooting](#12-troubleshooting)
+   - [Global Config (CLAUDE.md)](#52-global-config-claudemd)
+   - [Settings (hooks, plugins, model)](#53-settings-json)
+   - [Agents](#54-agents)
+   - [Skills](#55-skills)
+   - [Rules](#56-rules)
+   - [Auto-Sync Hook Script](#57-auto-sync-hook-script)
+6. [opencode CLI](#6-opencode-cli)
+   - [Installation](#61-installation)
+   - [Main Config](#62-main-config-opencodejsonc)
+   - [oh-my-openagent Config](#63-oh-my-openagent-config)
+   - [TUI and Legacy Config](#64-tui-and-legacy-config)
+7. [Zed IDE](#7-zed-ide)
+8. [Obsidian Vault](#8-obsidian-vault)
+9. [Environment Variables](#9-environment-variables)
+10. [Projects Structure](#10-projects-structure)
+11. [Quick Reference](#11-quick-reference)
+12. [Post-Install Checklist](#12-post-install-checklist)
+13. [Troubleshooting](#13-troubleshooting)
 
 ---
 
-## 1. Platform Notes
+## 1. Two AI Assistants — Architecture Overview
+
+This setup uses **two separate AI coding assistants**. They are completely independent: different config directories, different agent formats, different tool systems. Agents and skills from one do **not** carry over to the other.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  claude  (Claude Code CLI)          opencode  (opencode CLI)        │
+│  ─────────────────────────          ─────────────────────────────   │
+│  Config: ~/.claude/                 Config: ~/.config/opencode/      │
+│  Agents: ~/.claude/agents/*.md      Agents: oh-my-openagent plugin  │
+│  Skills: ~/.claude/skills/          Skills: built-in (LSP, Exa...)  │
+│  Model:  opusplan (Claude)          Model:  qwen3.6 + Sonnet + GPT  │
+│  Auth:   Anthropic account          Auth:   OpenCode Zen sub         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Why two tools?
+
+| Use case | Tool | Why |
+|---|---|---|
+| Structured DevOps workflows | Claude Code | Domain agents (infra, k8s, security…), skills, hooks, memory |
+| Fast codebase exploration | opencode | qwen3.6 (free/fast) via NaN API |
+| Deep autonomous tasks | opencode | oh-my-openagent parallel orchestration |
+| Inline code editing in Zed | Zed | qwen3.6 for edit predictions |
+
+### Agent systems compared
+
+| Concept | Claude Code | opencode (oh-my-openagent) |
+|---|---|---|
+| Config location | `~/.claude/agents/*.md` | `~/.config/opencode/oh-my-openagent.json` |
+| Agent format | Markdown + YAML frontmatter | JSON model config per agent name |
+| Domain agents | 18 custom agents (infra, k8s, gcp…) | None — Sisyphus delegates by task category |
+| Orchestrator | `lead` agent (Claude Opus) | Sisyphus (Claude Sonnet) |
+| Plan review | `plan-critic` agent | Momus (GPT-5.5 xhigh) |
+| Spec-first planning | `spec-driven-development` skill | Prometheus agent + `/start-work` |
+| Fast/cheap execution | `code-quality`, `security`, `cost` (haiku) | Explore, Librarian, Atlas, Sisyphus-Junior (qwen3.6) |
+| Deep execution | Most domain agents (sonnet) | Hephaestus (GPT-5.5 medium) |
+| Tool names | `Read`, `Grep`, `Glob`, `Bash`, `Edit`, `Write` | File system, LSP, AST-grep, web search (built-in) |
+
+### Key distinction for agents and skills in this repo
+
+The files in `agents/` and `skills/` are **Claude Code files only**. They use Claude Code's tool names and agent system. opencode cannot load or run them.
+
+When you set up a new machine:
+- `agents/*.md` → copy to `~/.claude/agents/` (Claude Code)
+- `skills/*.md` → copy to `~/.claude/skills/<name>/SKILL.md` (Claude Code)
+- `oh-my-openagent.json` → copy to `~/.config/opencode/oh-my-openagent.json` (opencode)
+
+---
+
+## 2. Platform Notes
 
 This guide supports three platforms. Commands that differ per OS are shown with tabs. Commands that are identical across platforms are shown once.
 
@@ -48,9 +99,9 @@ This guide supports three platforms. Commands that differ per OS are shown with 
 
 ---
 
-## 2. System Prerequisites
+## 3. System Prerequisites
 
-### 2.1 Package Manager
+### 3.1 Package Manager
 
 **macOS:**
 ```bash
@@ -70,7 +121,7 @@ sudo dnf update -y
 sudo dnf install -y curl wget git gcc gcc-c++ make
 ```
 
-### 2.2 Core Packages
+### 3.2 Core Packages
 
 **macOS:**
 ```bash
@@ -116,7 +167,7 @@ sudo dnf install -y terraform
 curl -f https://zed.dev/install.sh | sh
 ```
 
-### 2.3 Node.js 20 (required by opencode and Claude Code)
+### 3.3 Node.js 20 (required by opencode and Claude Code)
 
 **macOS:**
 ```bash
@@ -140,7 +191,7 @@ node --version  # should be v20.x.x
 npm --version   # should be 10.x.x
 ```
 
-### 2.4 Cloud and Infra CLIs
+### 3.4 Cloud and Infra CLIs
 
 **AWS CLI v2:**
 
@@ -212,7 +263,7 @@ tar -xf google-cloud-cli-*.tar.gz -C ~/Documents/
 ~/Documents/google-cloud-sdk/install.sh
 ```
 
-### 2.5 Bun (required for oh-my-openagent)
+### 3.5 Bun (required for oh-my-openagent)
 
 All platforms:
 ```bash
@@ -220,7 +271,7 @@ curl -fsSL https://bun.sh/install | bash
 # Adds ~/.bun/bin to PATH via ~/.zshrc automatically
 ```
 
-### 2.6 zsh and oh-my-zsh
+### 3.6 zsh and oh-my-zsh
 
 macOS: zsh is already the default shell.
 
@@ -249,7 +300,7 @@ Debian/Ubuntu: `sudo apt install -y zsh-syntax-highlighting`
 
 Fedora: `sudo dnf install -y zsh-syntax-highlighting`
 
-### 2.7 Fonts (optional but recommended)
+### 3.7 Fonts (optional but recommended)
 
 macOS:
 ```bash
@@ -260,7 +311,7 @@ Debian/Ubuntu / Fedora — download from https://www.nerdfonts.com/font-download
 
 ---
 
-## 3. Shell Environment
+## 4. Shell Environment
 
 File: `~/.zshrc`
 
@@ -324,13 +375,13 @@ curl -o ~/.zsh/catppuccin_mocha-zsh-syntax-highlighting.zsh \
 
 ---
 
-## 4. Claude Code
+## 5. Claude Code
 
 Claude Code is Anthropic's CLI assistant. It uses a multi-agent architecture where domain-specific agents handle specialized tasks.
 
 > **Model note:** The `model: sonnet`, `model: haiku`, `model: opus` fields in agent frontmatter are Claude Code aliases for Claude model tiers. The agent system prompts themselves are LLM-agnostic — they contain only role descriptions and constraints, with no Claude-specific behaviors or syntax.
 
-### 4.1 Installation
+### 5.1 Installation
 
 ```bash
 npm install -g @anthropic-ai/claude-code
@@ -342,7 +393,7 @@ claude
 # Follow the OAuth flow in your browser
 ```
 
-### 4.2 Global Config (`CLAUDE.md`)
+### 5.2 Global Config (`CLAUDE.md`)
 
 File: `~/.claude/CLAUDE.md`
 
@@ -454,7 +505,7 @@ The canonical documentation lives in `~/Documents/obsidian-vault/` (git: yosoyvi
 When compacting, preserve: current plan, file paths modified, test results, open issues, next steps. Discard: verbose outputs, intermediate exploration, completed steps needing no follow-up.
 ```
 
-### 4.3 Settings JSON
+### 5.3 Settings JSON
 
 File: `~/.claude/settings.json`
 
@@ -607,7 +658,7 @@ File: `~/.claude/settings.json`
 
 > **`opusplan` model:** Claude Code special alias — uses Opus for planning and Sonnet for execution automatically. Saves tokens without losing reasoning quality.
 
-### 4.4 Agents
+### 5.4 Agents
 
 Agents live in `~/.claude/agents/`. Each is a Markdown file with YAML frontmatter. The frontmatter fields (`model`, `tools`, `maxTurns`) are Claude Code concepts; the system prompt body is plain text that works with any capable LLM.
 
@@ -983,7 +1034,7 @@ Standards:
 
 ---
 
-### 4.5 Skills
+### 5.5 Skills
 
 Skills live in `~/.claude/skills/`. Each skill is a directory with a `skill.md` file (or similar, depending on the plugin format). Skills are synced from the Obsidian vault.
 
@@ -1011,7 +1062,7 @@ rsync -a ~/Documents/obsidian-vault/claude-code/skills/ ~/.claude/skills/
 
 > **Skills are LLM-agnostic.** They contain workflow instructions and checklists. Any capable LLM following these instructions will produce equivalent results.
 
-### 4.6 Rules
+### 5.6 Rules
 
 Rules live in `~/.claude/rules/`. They are injected into agent context automatically for relevant tasks.
 
@@ -1128,7 +1179,7 @@ All resources must have: Name, Environment, Team, ManagedBy=terraform
 - `golangci-lint run ./...` — key linters: errcheck, govet, staticcheck, revive, gocyclo
 ```
 
-### 4.7 Auto-Sync Hook Script
+### 5.7 Auto-Sync Hook Script
 
 File: `~/.claude/hooks/auto-sync.sh`
 
@@ -1192,11 +1243,11 @@ chmod +x ~/.claude/hooks/auto-sync.sh
 
 ---
 
-## 5. opencode CLI
+## 6. opencode CLI
 
 opencode is a terminal AI coding assistant with multi-agent orchestration via the `oh-my-openagent` plugin.
 
-### 5.1 Installation
+### 6.1 Installation
 
 All platforms:
 ```bash
@@ -1217,7 +1268,7 @@ npm install --prefix ~/.cache/opencode/packages/oh-my-openagent@latest \
 
 > **Why `--ignore-scripts`:** The `@ast-grep/cli` postinstall step moves a platform binary into place and can fail. Skipping it is safe — AST grep degrades gracefully.
 
-### 5.2 Main Config (`opencode.jsonc`)
+### 6.2 Main Config (`opencode.jsonc`)
 
 File: `~/.config/opencode/opencode.jsonc`
 
@@ -1261,7 +1312,7 @@ File: `~/.config/opencode/opencode.jsonc`
 
 **NaN API** (`api.nan.builders`): OpenAI-compatible proxy for qwen3.6, deepseek-v4-flash, mimo-v2.5, gemma4. Get a key at https://nan.builders.
 
-### 5.3 oh-my-openagent Config
+### 6.3 oh-my-openagent Config
 
 File: `~/.config/opencode/oh-my-openagent.json`
 
@@ -1464,7 +1515,7 @@ The "council" — a Claude Sonnet + GPT-5.5 pair review — is built into oh-my-
 | `/hyperplan` | 5 adversarial critics | Major architectural decisions |
 | `ultrawork` or `ulw` in prompt | Full agent team | Parallel orchestration across all agents |
 
-### 5.4 TUI and Legacy Config
+### 6.4 TUI and Legacy Config
 
 File: `~/.config/opencode/tui.json`
 ```json
@@ -1483,7 +1534,7 @@ File: `~/.opencode/opencode.json` — **must exist and be clean**
 
 > **Why the legacy file matters:** opencode reads both `~/.config/opencode/` and `~/.opencode/` (old location). If you previously installed plugins to the old location, they will silently load even after removing them from the main config. Create this file explicitly with an empty plugin list on every new machine.
 
-### 5.5 Verify Installation
+### 6.5 Verify Installation
 
 ```bash
 opencode debug info
@@ -1499,15 +1550,17 @@ opencode debug agent "Sisyphus - ultraworker" | python3 -c \
 
 ---
 
-## 6. Zed IDE
+## 7. Zed IDE
 
-### 6.1 Installation
+> **No agents or skills in Zed.** Zed has no concept of domain agents or skills — it is a code editor with an AI assistant panel, not a multi-agent framework. Its AI capabilities come entirely from the model configured in `settings.json`. You select a model and chat directly with it. For structured DevOps workflows, use Claude Code. For autonomous multi-step coding tasks, use opencode. Use Zed for fast inline edits and its AI panel when you want a lightweight, editor-native experience.
+
+### 7.1 Installation
 
 macOS: `brew install --cask zed` or https://zed.dev
 
 Linux: `curl -f https://zed.dev/install.sh | sh`
 
-### 6.2 Config
+### 7.2 Config
 
 File: `~/.config/zed/settings.json`
 
@@ -1583,18 +1636,18 @@ After writing this file, add the NaN API key in Zed's UI: open Zed → `Cmd+,` (
 
 ---
 
-## 7. Obsidian Vault
+## 8. Obsidian Vault
 
 The Obsidian vault is the canonical source of truth for all Claude Code configuration. It is a git repository that auto-syncs after every Claude Code session.
 
-### 7.1 Clone the Vault
+### 8.1 Clone the Vault
 
 ```bash
 cd ~/Documents
 git clone git@github.com:yosoyvilla/obsidian-vault.git
 ```
 
-### 7.2 Install Obsidian
+### 8.2 Install Obsidian
 
 macOS: `brew install --cask obsidian`
 
@@ -1606,7 +1659,7 @@ chmod +x Obsidian-*.AppImage
 
 Open the vault at `~/Documents/obsidian-vault/`.
 
-### 7.3 Vault Structure
+### 8.3 Vault Structure
 
 ```
 obsidian-vault/
@@ -1620,7 +1673,7 @@ obsidian-vault/
     └── memory/           # Mirrored from all project memories
 ```
 
-### 7.4 How It Stays In Sync
+### 8.4 How It Stays In Sync
 
 | Mechanism | When | What |
 |---|---|---|
@@ -1631,7 +1684,7 @@ obsidian-vault/
 
 ---
 
-## 8. Environment Variables
+## 9. Environment Variables
 
 Add to `~/.zshrc`. Never commit API keys to git.
 
@@ -1663,7 +1716,7 @@ export SPACES_ACCESS_KEY_ID="..."
 
 ---
 
-## 9. Projects Structure
+## 10. Projects Structure
 
 ```
 ~/Documents/
@@ -1691,7 +1744,7 @@ Per-project Claude context:
 
 ---
 
-## 10. Quick Reference
+## 11. Quick Reference
 
 ### Claude Code
 
@@ -1739,7 +1792,7 @@ ultrawork                # (in any prompt) Full parallel orchestration
 
 ---
 
-## 11. Post-Install Checklist
+## 12. Post-Install Checklist
 
 Copy this list and check off each item:
 
@@ -1789,7 +1842,7 @@ Copy this list and check off each item:
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 ### oh-my-openagent not loading
 
