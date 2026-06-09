@@ -1882,24 +1882,14 @@ Skills live in `~/.agents/skills/<name>/SKILL.md` (global, all projects) or `<pr
 
 **Install the skills from this repo:**
 
+Each skill in `zed-skills/` is already a folder containing `SKILL.md` — just copy them:
+
 ```bash
 mkdir -p ~/.agents/skills
-# Copy each skill folder:
-cp -r zed-skills/karpathy-guidelines ~/.agents/skills/karpathy-guidelines
-cp -r zed-skills/terraform-devops ~/.agents/skills/terraform-devops
-cp -r zed-skills/k8s-debug ~/.agents/skills/k8s-debug
-cp -r zed-skills/incident-triage ~/.agents/skills/incident-triage
-cp -r zed-skills/spec-first ~/.agents/skills/spec-first
+cp -r zed-skills/* ~/.agents/skills/
 ```
 
-> **Note:** Each folder in this repo's `zed-skills/` is a flat `.md` file. Rename it to `SKILL.md` inside the skill folder:
-> ```bash
-> for skill in zed-skills/*.md; do
->   name=$(basename "$skill" .md)
->   mkdir -p ~/.agents/skills/$name
->   cp "$skill" ~/.agents/skills/$name/SKILL.md
-> done
-> ```
+That's it. Zed auto-discovers all subfolders of `~/.agents/skills/` on next launch.
 
 **Installed skills:**
 
