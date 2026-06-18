@@ -20,22 +20,25 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
    - [Agents](#54-agents)
    - [Skills](#55-skills)
    - [Rules](#56-rules)
-   - [Auto-Sync Hook Script](#57-auto-sync-hook-script)
+   - [Hook Scripts (auto-sync + engram-sync)](#57-hook-scripts)
 6. [opencode CLI](#6-opencode-cli)
    - [Installation](#61-installation)
    - [Main Config](#62-main-config-opencodejsonc)
    - [oh-my-openagent Config](#63-oh-my-openagent-config)
    - [TUI and Legacy Config](#64-tui-and-legacy-config)
+   - [Verify Installation](#65-verify-installation)
+   - [Shared AGENTS.md, Custom Agents, Commands](#66-shared-agentsmd-custom-agents-and-commands)
 7. [Zed IDE](#7-zed-ide)
    - [Installation](#71-installation)
    - [Config](#72-config)
    - [Skills](#73-zed-skills)
-8. [Obsidian Vault](#8-obsidian-vault)
-9. [Environment Variables](#9-environment-variables)
-10. [Projects Structure](#10-projects-structure)
-11. [Quick Reference](#11-quick-reference)
-12. [Post-Install Checklist](#12-post-install-checklist)
-13. [Troubleshooting](#13-troubleshooting)
+8. [Engram (Persistent Memory)](#8-engram-persistent-memory)
+9. [Obsidian Vault](#9-obsidian-vault)
+10. [Environment Variables](#10-environment-variables)
+11. [Projects Structure](#11-projects-structure)
+12. [Quick Reference](#12-quick-reference)
+13. [Post-Install Checklist](#13-post-install-checklist)
+14. [Troubleshooting](#14-troubleshooting)
 
 ---
 
@@ -50,8 +53,8 @@ This setup uses **two separate AI coding assistants**. They are completely indep
 │  Config: ~/.claude/                 Config: ~/.config/opencode/      │
 │  Agents: ~/.claude/agents/*.md      Agents: oh-my-openagent plugin  │
 │  Skills: ~/.claude/skills/          Skills: built-in (LSP, Exa...)  │
-│  Model:  opusplan (Claude)          Model:  qwen3.6 + Sonnet + GPT  │
-│  Auth:   Anthropic account          Auth:   OpenCode Zen sub         │
+│  Model:  opus[1m] (Claude)          Model:  NaN (nan/* only)         │
+│  Auth:   Anthropic account          Auth:   NAN_API_KEY              │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,22 +73,26 @@ This setup uses **two separate AI coding assistants**. They are completely indep
 |---|---|---|
 | Config location | `~/.claude/agents/*.md` | `~/.config/opencode/oh-my-openagent.json` |
 | Agent format | Markdown + YAML frontmatter | JSON model config per agent name |
-| Domain agents | 18 custom agents (infra, k8s, gcp…) | None — Sisyphus delegates by task category |
-| Orchestrator | `lead` agent (Claude Opus) | Sisyphus (Claude Sonnet) |
-| Plan review | `plan-critic` agent | Momus (GPT-5.5 xhigh) |
+| Domain agents | 19 custom agents (infra, k8s, gcp, doc-reviewer…) | None — Sisyphus delegates by task category |
+| Orchestrator | `lead` agent (Claude Opus) | Sisyphus (nan/deepseek-v4-flash) |
+| Plan review | `plan-critic` agent | Momus (nan/mimo-v2.5) |
 | Spec-first planning | `spec-driven-development` skill | Prometheus agent + `/start-work` |
-| Fast/cheap execution | `code-quality`, `security`, `cost` (haiku) | Explore, Librarian, Atlas, Sisyphus-Junior (qwen3.6) |
-| Deep execution | Most domain agents (sonnet) | Hephaestus (GPT-5.5 medium) |
+| Fast/cheap execution | `code-quality`, `security`, `cost` (haiku) | Explore, Librarian, Atlas, Sisyphus-Junior (nan/qwen3.6) |
+| Deep execution | Most domain agents (sonnet) | Sisyphus / deep category (nan/deepseek-v4-flash) |
 | Tool names | `Read`, `Grep`, `Glob`, `Bash`, `Edit`, `Write` | File system, LSP, AST-grep, web search (built-in) |
 
 ### Key distinction for agents and skills in this repo
 
-The files in `agents/` and `skills/` are **Claude Code files only**. They use Claude Code's tool names and agent system. opencode cannot load or run them.
+The files in `agents/` and `skills/` are **Claude Code files only** — they use Claude Code's tool names and agent system, and opencode cannot load or run them. The repo also vendors opencode-specific assets (`opencode-agents/`, `opencode-commands/`), Zed skills (`zed-skills/`), and a shared, tool-agnostic `AGENTS.md`.
 
 When you set up a new machine:
 - `agents/*.md` → copy to `~/.claude/agents/` (Claude Code)
 - `skills/*.md` → copy to `~/.claude/skills/<name>/SKILL.md` (Claude Code)
-- `oh-my-openagent.json` → copy to `~/.config/opencode/oh-my-openagent.json` (opencode)
+- `hooks/*` → copy to `~/.claude/hooks/` (Claude Code; see Section 5.7)
+- `oh-my-openagent.json` content → `~/.config/opencode/oh-my-openagent.json` (opencode; see Section 6.3)
+- `opencode-agents/*.md` → `~/.config/opencode/agents/`, `opencode-commands/*.md` → `~/.config/opencode/commands/` (opencode; see Section 6.6)
+- `AGENTS.md` → byte-identical to **both** `~/.config/opencode/AGENTS.md` and `~/.config/zed/AGENTS.md` (see Section 6.6)
+- `zed-skills/*` → copy to `~/.agents/skills/` (Zed; see Section 7.3)
 
 ---
 
@@ -131,6 +138,12 @@ sudo dnf install -y curl wget git gcc gcc-c++ make
 ```bash
 brew install gh ripgrep fzf terraform terraform-docs
 brew install --cask ghostty zed
+# opencode (anomalyco build) — see Section 6.1
+brew install anomalyco/tap/opencode
+# Engram persistent memory (third-party tap) — see Section 8.
+# The same tap also ships gentle-ai.
+brew install gentleman-programming/tap/engram
+# brew install gentleman-programming/tap/gentle-ai   # optional
 ```
 
 **Debian/Ubuntu:**
@@ -679,11 +692,12 @@ Route tasks to the right tier. Not everything needs an agent.
 Simple tasks, quick fixes, single-file edits, questions, exploration. Handle directly.
 
 ### Plan Review (Mandatory)
-After writing ANY multi-step implementation plan (3+ steps or touching multiple systems), ALWAYS invoke the **plan-critic** agent before presenting the plan to the user for approval. Never skip this step.
+After writing ANY multi-step implementation plan (3+ steps or touching multiple systems), ALWAYS invoke the **plan-critic** agent before presenting the plan to the user for approval. Never skip this step. The plan-critic verifies documentation, identifies risks, and confirms the approach is sound.
 
 The workflow is always: write plan → invoke plan-critic → present plan + critique to user → user approves → execute.
 
 ### Tier 2: Direct to domain agent (skip lead)
+Single-domain tasks where the domain is obvious. Route directly:
 - Terraform/cloud provisioning -> **infra** (sonnet)
 - K8s/Helm/ArgoCD workloads -> **k8s** (sonnet)
 - VPC/DNS/LB/VPN/Traefik/peering -> **networking** (sonnet)
@@ -691,23 +705,26 @@ The workflow is always: write plan → invoke plan-critic → present plan + cri
 - Pipeline/CI structure -> **cicd** (sonnet)
 - Query tuning/migrations -> **database** (sonnet)
 - NRQL/alerts/SLOs -> **observability** (sonnet)
-- UI/UX design, frontend styling -> **design** (sonnet)
-- Code review -> **code-quality** (haiku, advisory)
+- UI/UX design, frontend styling -> **design** (sonnet, Playwright verification)
+- Code review request -> **code-quality** (haiku, advisory)
 - Security audit/review -> **security** (haiku, advisory)
-- Active AWS security incident -> **aws-incident** (sonnet)
-- Cloud cost analysis -> **cost** (haiku, advisory)
-- Shopify development -> **shopify** (sonnet)
-- Airbyte ELT -> **airbyte** (sonnet)
-- GCP/GKE -> **gcp** (sonnet)
-- Plan review -> **plan-critic** (sonnet, mandatory)
+- Active AWS security incident, WAF attack, DDoS, GuardDuty finding, CloudTrail forensics -> **aws-incident** (sonnet)
+- AWS/GCP/Kubecost cost analysis, savings, rightsizing -> **cost** (haiku, advisory)
+- Shopify Functions, Admin API, theme, app extensions -> **shopify** (sonnet)
+- Airbyte connector config, sync debugging, namespace issues -> **airbyte** (sonnet)
+- GKE, GCP IAM, Cloud SQL, Artifact Registry, Secret Manager, Terragrunt -> **gcp** (sonnet)
+- Reviewing/critiquing any implementation plan before execution -> **plan-critic** (sonnet, mandatory)
+- Reviewing any documentation we create/edit (Confluence, READMEs, runbooks, guides) for multi-audience readability, official-doc accuracy (>95% confidence), and copy/format/special-character issues -> **doc-reviewer** (sonnet, advisory)
 
 ### Tier 3: Lead agent first (multi-domain/complex)
 Use **lead** (opus) ONLY when: task spans 2+ domains, scope is unclear, touches production, or requires architecture decisions.
 
 ### Shared Context
-Agents share state via `.claude/agent-context/` (relative to CWD, per-project).
+Agents share state via `.claude/agent-context/` (relative to CWD, per-project). Before starting, agents read `lead.md` for the plan and any relevant `<agent>.md` files. After completing work, agents write findings to their own context file. Overwrite with current info; do not append indefinitely. All agents have persistent memory (`memory: user`) -- they learn patterns across sessions automatically.
 
 ### Agent Context File Schema
+When agents write to `.claude/agent-context/<agent>.md`, they MUST use this structure:
+
 ```
 ## Summary
 [What was accomplished — one sentence]
@@ -721,30 +738,40 @@ Agents share state via `.claude/agent-context/` (relative to CWD, per-project).
 - [next action when resuming]
 ```
 
+### Progress Files for Long-Running Work
+For tasks spanning multiple sessions (large migrations, multi-PR features), create a `claude-progress.json` at the repo root. JSON format preferred over Markdown — more resistant to accidental model edits. Session start sequence: read git history → read progress file → run smoke tests → pick next item.
+
 ### Multi-Project Structure
 Projects live in `~/Documents/` with per-project `.claude/CLAUDE.md` files:
 - `360latam/` - Real estate portals (FincaRaiz, Encuentra24, Infocasas, Yapo)
 - `cedarplanters/` - E-commerce (Shopify, warehousing, infra)
 - `kashport/` - FinTech/payments (Monyte)
 - `Varsity/` - EdTech (EKS, Terraform, large infra)
-- `Personal/` - Side projects
+- `Personal/` - Side projects (Crewgent, etc.)
 
-Shared rules: `~/.claude/rules/` (terraform, kubernetes, security-baseline, go).
+Shared rules: `~/.claude/rules/` (terraform, kubernetes, security-baseline).
 
 ## Obsidian Knowledge Base (Source of Truth)
-The canonical documentation lives in `~/Documents/obsidian-vault/` (git: yosoyvilla/obsidian-vault).
+The canonical documentation for this entire Claude Code setup lives in `~/Documents/obsidian-vault/` (Git: yosoyvilla/obsidian-vault).
 - Reference: @~/Documents/obsidian-vault/claude-code/setup.md
-- IMPORTANT: When modifying agents, skills, hooks, rules, plugins, or settings, ALWAYS update the vault and commit+push.
+- IMPORTANT: When modifying agents, skills, hooks, rules, plugins, or settings, ALWAYS update the corresponding obsidian vault file AND commit+push the changes.
+- The vault documents: agent routing, plugin list, hooks, skills, security, project tech stacks, workflows, and tips.
 
 ## Token Management
-- Use `/clear` between unrelated tasks.
-- Use `/compact` when context grows large.
-- Prefer CLI tools over MCP servers.
-- Model selection: haiku for lookups, sonnet for implementation, opus for architecture.
-- Before ending a complex session, write a checkpoint to the project's auto-memory.
+- Use `/clear` between unrelated tasks. Stale context burns tokens.
+- Use `/compact` when context grows large but you need to continue the same task.
+- Prefer CLI tools (aws, kubectl, gh, gcloud, sentry-cli) over MCP servers. MCP tools add persistent overhead to context even when idle.
+- Model selection: haiku for simple lookups/formatting, sonnet for implementation, opus only for architecture and planning.
+- Keep agent prompts lean. If an agent's instructions exceed 100 lines, move detail into skills.
+- Before ending a complex session, write a brief checkpoint to the project's auto-memory: what was done, what's open, next steps.
 
 ## Compact Instructions
-When compacting, preserve: current plan, file paths modified, test results, open issues, next steps. Discard: verbose outputs, intermediate exploration, completed steps needing no follow-up.
+When compacting, preserve: current plan from lead agent, file paths modified, test results, open issues, and next steps. Discard: verbose command outputs, intermediate exploration, and completed steps that need no follow-up.
+
+## Auto-Learning
+- Agents save learnings via `memory: user`. Do not duplicate what's already in project MEMORY.md.
+- Keep MEMORY.md under 200 lines (only first 200 lines are auto-loaded). Use topic files for detail.
+- Save: confirmed patterns, architecture decisions, gotchas, access procedures. Skip: session-specific state, speculative conclusions.
 ```
 
 ### 5.3 Settings JSON
@@ -763,10 +790,7 @@ File: `~/.claude/settings.json`
     "commit": "",
     "pr": ""
   },
-  "model": "opusplan",
-  "autoDreamEnabled": true,
-  "skipAutoPermissionPrompt": true,
-  "agentPushNotifEnabled": true,
+  "model": "opus[1m]",
   "hooks": {
     "Stop": [
       {
@@ -778,6 +802,24 @@ File: `~/.claude/settings.json`
             "async": true
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/engram-sync.sh",
+            "statusMessage": "Syncing memory to Engram...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
       }
     ],
     "PostCompact": [
@@ -787,6 +829,16 @@ File: `~/.claude/settings.json`
             "type": "command",
             "command": "~/.claude/hooks/auto-sync.sh",
             "statusMessage": "Post-compact memory sync...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/engram-sync.sh",
+            "statusMessage": "Post-compact Engram sync...",
             "async": true
           }
         ]
@@ -831,7 +883,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"' 2>/dev/null || notify-send 'Claude Code' 'Needs your attention' 2>/dev/null || true"
+            "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
           }
         ]
       }
@@ -854,6 +906,15 @@ File: `~/.claude/settings.json`
             "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // \"\"' 2>/dev/null); if echo \"$CMD\" | grep -qE '(--profile[[:space:]]+(vtpr|bipr|lppr)|awsume[[:space:]]+(vtpr|bipr|lppr)|profile=(vtpr|bipr|lppr))' && echo \"$CMD\" | grep -qiE '\\b(delete|terminate|remove|purge|destroy|disable|deregister|drop|truncate)\\b'; then jq -n '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"additionalContext\": \"PROD SAFETY: This command targets a production AWS account (vtpr/bipr/lppr) and contains a destructive operation. Confirm this is intentional before proceeding.\"}}'; fi; exit 0"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -872,6 +933,57 @@ File: `~/.claude/settings.json`
           {
             "type": "command",
             "command": "cat | jq -c '{ts: (now | todate), cmd: .tool_input.command, cwd: .cwd}' >> ~/.claude/command-audit.log 2>/dev/null; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -894,11 +1006,17 @@ File: `~/.claude/settings.json`
     "commit-commands@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
     "php-lsp@claude-plugins-official": true
-  }
+  },
+  "autoDreamEnabled": true,
+  "skipWorkflowUsageWarning": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true
 }
 ```
 
-> **`opusplan` model:** Claude Code special alias — uses Opus for planning and Sonnet for execution automatically. Saves tokens without losing reasoning quality.
+> **orca hooks:** The `/Users/davidvilla/.orca/agent-hooks/claude-hook.sh` entries that appear across the Stop, PreToolUse, PostToolUse, UserPromptSubmit, StopFailure, PostToolUseFailure, and PermissionRequest events belong to orca, an external/optional tool installed separately (not part of this repo) — each invocation is guarded by an `[ -x ... ]` check, so if orca is not installed the hook is a no-op.
+
+> **`opus[1m]` model:** Claude Code model selector — Opus with the 1M-token context window. The `[1m]` suffix requests the long-context variant.
 
 ### 5.4 Agents
 
@@ -1276,6 +1394,27 @@ Standards:
 
 ---
 
+#### `doc-reviewer.md` — Documentation Reviewer (advisory)
+```markdown
+---
+name: doc-reviewer
+description: Documentation quality reviewer. Use for any documentation we create or edit (Confluence pages, READMEs, runbooks, guides, markdown). Checks that docs read clearly for technical, business, vibecoder, and non-technical audiences; verifies every technical claim against official vendor documentation (>95% confidence, no hallucinations); and catches copy/format issues including special characters and raw markup that should not render. Reviews and reports; applies fixes only when explicitly asked.
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, WebSearch, ToolSearch
+model: sonnet
+maxTurns: 20
+memory: user
+---
+
+You are a documentation quality reviewer. You make sure documentation is correct, clear for every audience, and clean of copy/format defects. You review and report; you apply fixes only when explicitly asked.
+
+The full system prompt is in `agents/doc-reviewer.md`. Review dimensions:
+- Multi-audience readability — every doc must serve technical, business, vibecoder, and non-technical readers.
+- Official-doc accuracy — verify every technical claim against official vendor documentation at >95% confidence; no hallucinations.
+- Copy and format — catch special characters and raw markup that should not render.
+```
+
+---
+
 ### 5.5 Skills
 
 Skills live in `~/.claude/skills/`. Each skill is a directory with a `skill.md` file (or similar, depending on the plugin format). Skills are synced from the Obsidian vault.
@@ -1421,7 +1560,24 @@ All resources must have: Name, Environment, Team, ManagedBy=terraform
 - `golangci-lint run ./...` — key linters: errcheck, govet, staticcheck, revive, gocyclo
 ```
 
-### 5.7 Auto-Sync Hook Script
+### 5.7 Hook Scripts
+
+The `~/.claude/hooks/` directory holds three scripts, all committed in this repo under `hooks/`:
+
+| Script | Triggered by | What it does |
+|---|---|---|
+| `auto-sync.sh` | Stop, PostCompact (async) | rsync Claude memory/agents/skills/rules/settings → Obsidian vault, then git commit + push |
+| `engram-sync.sh` | Stop, PostCompact (async) | Lock wrapper that runs `engram-sync.py` to mirror Claude memory files → Engram |
+| `engram-sync.py` | called by `engram-sync.sh` | Reconciles each memory file against a manifest and saves/replaces observations in Engram |
+
+Copy them into place and make the shell scripts executable:
+```bash
+mkdir -p ~/.claude/hooks
+cp hooks/auto-sync.sh hooks/engram-sync.sh hooks/engram-sync.py ~/.claude/hooks/
+chmod +x ~/.claude/hooks/auto-sync.sh ~/.claude/hooks/engram-sync.sh ~/.claude/hooks/engram-sync.py
+```
+
+#### `auto-sync.sh` (memory → Obsidian)
 
 File: `~/.claude/hooks/auto-sync.sh`
 
@@ -1483,6 +1639,45 @@ chmod +x ~/.claude/hooks/auto-sync.sh
 
 > **Linux path note:** The memory path uses `-Users-davidvilla` which is derived from the macOS home directory `/Users/davidvilla`. On Linux, home is `/home/davidvilla`, so the path would be `-home-davidvilla`. The auto-sync script uses `$MEMORY_SRC` — update this variable to match your actual path: `$CLAUDE_DIR/projects/$(echo $HOME | tr '/' '-' | sed 's/^-//')/memory`
 
+#### `engram-sync.sh` + `engram-sync.py` (memory → Engram)
+
+These two files mirror Claude memory files (`~/.claude/projects/*/memory/*.md`, excluding `MEMORY.md`) into Engram (see Section 8) so the same learnings are recallable via the `mem_*` tools from opencode, Zed, and any other Engram client. They run on the Stop and PostCompact events, alongside `auto-sync.sh`.
+
+The shell wrapper is short — it exists only to serialize concurrent session-ends and call the Python worker. The full contents are in `hooks/engram-sync.sh`:
+
+```bash
+#!/usr/bin/env bash
+# Mirror new/edited Claude memory files into Engram. Async hook on Stop + PostCompact.
+# macOS has no flock; use an atomic mkdir lock so concurrent session-ends don't race.
+LOCK=/tmp/engram-sync.lock
+# Clear a stale lock left by a hard-killed process (older than 60 min), so a
+# crash can never permanently disable syncing.
+if [ -d "$LOCK" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+  rmdir "$LOCK" 2>/dev/null
+fi
+mkdir "$LOCK" 2>/dev/null || exit 0
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+
+python3 "$HOME/.claude/hooks/engram-sync.py" "${1:-sync}" >>"$HOME/.claude/engram-sync.log" 2>&1
+exit 0
+```
+
+The Python worker (`hooks/engram-sync.py`, ~200 lines — referenced rather than pasted here) does the actual reconciliation. Its behavior:
+
+- **Source of truth is the memory files.** State lives in a content-hash manifest at `~/.claude/engram-sync-state.json` (`{abs_path: {hash, obs_id, project, title}}`).
+- **Replace-on-change.** New file → `engram save`; changed file → save the new observation *before* deleting the old one (so a failed save never loses data); unchanged → no-op.
+- **Skips secrets.** Any memory file whose contents match real secret-value patterns (GitHub PATs, AWS access keys, private-key headers, Slack tokens, JWTs, `aws_secret_access_key`) is skipped entirely — nothing secret is ever sent to Engram.
+- **Never mirrors deletions.** Deleting a memory file does not delete its Engram observation — no destructive cascade.
+- **mkdir-based lock.** macOS has no `flock`, so the wrapper uses an atomic `mkdir` lock with a 60-minute stale-lock recovery.
+- **`backfill` mode.** Run `engram-sync.py backfill` for first-time setup or recovery: it adopts already-imported Engram observations into the manifest (matched by exact project + title via `engram export`) so the existing memories are not re-saved as duplicates.
+- **Manifest-loss safety guard.** If the manifest is empty/missing but Engram already holds observations, `sync` aborts and tells you to run `backfill` — preventing a lost manifest from mass-duplicating every memory.
+
+```bash
+chmod +x ~/.claude/hooks/engram-sync.sh ~/.claude/hooks/engram-sync.py
+# First time on a machine that already has memories in Engram:
+~/.claude/hooks/engram-sync.py backfill
+```
+
 ---
 
 ## 6. opencode CLI
@@ -1491,15 +1686,20 @@ opencode is a terminal AI coding assistant with multi-agent orchestration via th
 
 ### 6.1 Installation
 
-All platforms:
+This setup uses the `anomalyco` build of opencode, installed via Homebrew tap (not the `opencode-ai` npm package):
+
+macOS:
 ```bash
-npm install -g opencode-ai
+brew install anomalyco/tap/opencode
 ```
 
-Authenticate (requires OpenCode Zen subscription):
+Verify which build is on PATH:
 ```bash
-opencode providers add opencode
+which opencode      # → /opt/homebrew/bin/opencode
+brew list opencode  # → .../Cellar/opencode/<version>/bin/opencode
 ```
+
+> **Provider note:** This build runs entirely on the NaN provider (see Section 6.2). No OpenCode Zen subscription is required — only a `NAN_API_KEY` in the environment.
 
 Install the oh-my-openagent plugin into the opencode cache:
 ```bash
@@ -1514,10 +1714,45 @@ npm install --prefix ~/.cache/opencode/packages/oh-my-openagent@latest \
 
 File: `~/.config/opencode/opencode.jsonc`
 
-```json
+```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode/claude-sonnet-4-6",
+  "model": "nan/deepseek-v4-flash",
+  "small_model": "nan/qwen3.6",
+  "enabled_providers": ["nan"],
+  "lsp": true,
+  "compaction": {
+    "auto": true,
+    "prune": true
+  },
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm -rf /": "deny",
+      "rm -rf /*": "deny",
+      "rm -rf ~": "deny",
+      "rm -rf ~/*": "deny",
+      "git push --force*": "deny",
+      "git push -f*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -fd*": "deny",
+      "terraform destroy*": "deny",
+      "terraform force-unlock*": "deny",
+      "kubectl delete namespace*": "deny"
+    },
+    "skill": {
+      "terraform-devops": "deny",
+      "incident-triage": "deny",
+      "spec-first": "deny"
+    }
+  },
+  "mcp": {
+    "engram": {
+      "type": "local",
+      "command": ["engram", "mcp", "--tools=agent"],
+      "enabled": true
+    }
+  },
   "plugin": [
     "oh-my-openagent@latest"
   ],
@@ -1552,151 +1787,145 @@ File: `~/.config/opencode/opencode.jsonc`
 }
 ```
 
-**NaN API** (`api.nan.builders`): OpenAI-compatible proxy for qwen3.6, deepseek-v4-flash, mimo-v2.5, gemma4. Get a key at https://nan.builders.
+**NaN API** (`api.nan.builders`): OpenAI-compatible proxy for qwen3.6, deepseek-v4-flash, mimo-v2.5, gemma4. NaN is the only enabled provider (`enabled_providers: ["nan"]`); the default model is `nan/deepseek-v4-flash` and the cheap `small_model` is `nan/qwen3.6`. Get a key at https://nan.builders.
+
+**Permissions:** `permission.bash` allows all commands by default but hard-denies destructive ones (`rm -rf /`, force pushes, `git reset --hard`, `terraform destroy`/`force-unlock`, `kubectl delete namespace`). `permission.skill` denies three oh-my-openagent skills (`terraform-devops`, `incident-triage`, `spec-first`) so they are not auto-invoked.
+
+**Engram MCP server (`mcp.engram`):** Registers Engram (Section 8) as a local MCP server — opencode launches `engram mcp --tools=agent`, which exposes the `mem_*` tools for persistent cross-session memory (recall and save). Engram runs locally on SQLite with no model provider.
 
 ### 6.3 oh-my-openagent Config
 
 File: `~/.config/opencode/oh-my-openagent.json`
 
-**Model strategy:**
-- `nan/qwen3.6` — all cheap/fast/high-volume work (~80% of tasks): explore, librarian, atlas, quick tasks
-- `opencode/claude-sonnet-4-6` — orchestration, planning, complex implementation
-- `opencode/gpt-5.5` — deep autonomous execution, architecture decisions, critical review
+**Model strategy (NaN-only):** Every agent and category runs on `nan/*` models. There are no Claude or GPT models here — NaN is the only provider.
+- `nan/qwen3.6` — fast/cheap default, high-volume work: explore, librarian, atlas, sisyphus-junior, quick/writing/artistry categories
+- `nan/deepseek-v4-flash` — orchestration and planning: sisyphus, prometheus, metis, plus the deep/unspecified-high categories
+- `nan/mimo-v2.5` — deep reasoning, review, and multimodal: oracle, momus, multimodal-looker, plus the visual-engineering/ultrabrain categories
+- `nan/gemma4` — low-cost fallback for the qwen3.6 tier
+
+> **`hephaestus` is disabled** via `disabled_agents: ["hephaestus"]` — it is not part of this configuration.
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
 
+  "disabled_agents": ["hephaestus"],
+
   "agents": {
     "sisyphus": {
-      "model": "opencode/claude-sonnet-4-6",
+      "model": "nan/deepseek-v4-flash",
       "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "medium" },
-        { "model": "anthropic/claude-sonnet-4-6" },
-        { "model": "nan/deepseek-v4-flash" }
-      ]
-    },
-    "hephaestus": {
-      "model": "opencode/gpt-5.5",
-      "variant": "medium",
-      "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "medium" }
-      ]
-    },
-    "oracle": {
-      "model": "opencode/gpt-5.5",
-      "variant": "high",
-      "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "high" },
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/mimo-v2.5" },
+        { "model": "nan/qwen3.6" }
       ]
     },
     "prometheus": {
-      "model": "opencode/claude-sonnet-4-6",
+      "model": "nan/deepseek-v4-flash",
       "fallback_models": [
-        { "model": "anthropic/claude-sonnet-4-6" },
-        { "model": "opencode/gpt-5.5", "variant": "high" }
+        { "model": "nan/mimo-v2.5" },
+        { "model": "nan/qwen3.6" }
       ]
     },
     "metis": {
-      "model": "opencode/claude-sonnet-4-6",
+      "model": "nan/deepseek-v4-flash",
+      "temperature": 0.5,
       "fallback_models": [
-        { "model": "anthropic/claude-sonnet-4-6" },
-        { "model": "opencode/gpt-5.5", "variant": "high" }
+        { "model": "nan/mimo-v2.5" },
+        { "model": "nan/qwen3.6" }
+      ]
+    },
+    "oracle": {
+      "model": "nan/mimo-v2.5",
+      "fallback_models": [
+        { "model": "nan/deepseek-v4-flash" }
       ]
     },
     "momus": {
-      "model": "opencode/gpt-5.5",
-      "variant": "xhigh",
+      "model": "nan/mimo-v2.5",
+      "temperature": 0.1,
       "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "xhigh" },
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/deepseek-v4-flash" }
+      ]
+    },
+    "multimodal-looker": {
+      "model": "nan/mimo-v2.5",
+      "fallback_models": [
+        { "model": "nan/gemma4" }
       ]
     },
     "atlas": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/gemma4" }
       ]
     },
     "explore": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" },
-        { "model": "anthropic/claude-haiku-4-5" }
+        { "model": "nan/gemma4" }
       ]
     },
     "librarian": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" },
-        { "model": "anthropic/claude-haiku-4-5" }
+        { "model": "nan/gemma4" }
       ]
     },
     "sisyphus-junior": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" }
-      ]
-    },
-    "multimodal-looker": {
-      "model": "opencode/gpt-5.5",
-      "variant": "medium",
-      "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "medium" },
-        { "model": "nan/mimo-v2.5" }
+        { "model": "nan/deepseek-v4-flash" }
       ]
     }
   },
 
   "categories": {
     "quick": {
-      "model": "nan/qwen3.6"
+      "model": "nan/qwen3.6",
+      "fallback_models": [
+        { "model": "nan/gemma4" }
+      ]
     },
     "unspecified-low": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/gemma4" }
       ]
     },
     "unspecified-high": {
-      "model": "opencode/claude-sonnet-4-6",
+      "model": "nan/deepseek-v4-flash",
       "fallback_models": [
-        { "model": "anthropic/claude-sonnet-4-6" },
-        { "model": "opencode/gpt-5.5", "variant": "medium" }
+        { "model": "nan/mimo-v2.5" }
       ]
     },
     "writing": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/gemma4" }
       ]
     },
     "visual-engineering": {
-      "model": "opencode/claude-sonnet-4-6",
+      "model": "nan/mimo-v2.5",
       "fallback_models": [
-        { "model": "anthropic/claude-sonnet-4-6" }
+        { "model": "nan/deepseek-v4-flash" }
       ]
     },
     "ultrabrain": {
-      "model": "opencode/gpt-5.5",
-      "variant": "xhigh",
+      "model": "nan/mimo-v2.5",
       "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "xhigh" }
+        { "model": "nan/deepseek-v4-flash" }
       ]
     },
     "deep": {
-      "model": "opencode/gpt-5.5",
-      "variant": "medium",
+      "model": "nan/deepseek-v4-flash",
       "fallback_models": [
-        { "model": "openai/gpt-5.5", "variant": "medium" },
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/mimo-v2.5" }
       ]
     },
     "artistry": {
       "model": "nan/qwen3.6",
       "fallback_models": [
-        { "model": "opencode/claude-sonnet-4-6" }
+        { "model": "nan/gemma4" }
       ]
     }
   },
@@ -1705,7 +1934,7 @@ File: `~/.config/opencode/oh-my-openagent.json`
 
   "runtime_fallback": {
     "enabled": true,
-    "retry_on_errors": [400, 401, 403, 404, 429, 500, 502, 503, 504],
+    "retry_on_errors": [429, 500, 502, 503, 504],
     "max_fallback_attempts": 3,
     "cooldown_seconds": 15,
     "timeout_seconds": 10,
@@ -1733,29 +1962,31 @@ File: `~/.config/opencode/oh-my-openagent.json`
 
 | Agent | Model | Role |
 |---|---|---|
-| Sisyphus | Claude Sonnet | Main orchestrator — plans, delegates, tracks todos |
-| Prometheus | Claude Sonnet | Spec-first planner — interviews before coding |
-| Metis | Claude Sonnet | Pre-planning consultant — gap analysis |
-| Momus | GPT-5.5 xhigh | Critical reviewer — adversarial plan review |
-| Hephaestus | GPT-5.5 medium | Deep autonomous execution |
-| Oracle | GPT-5.5 high | Architecture decisions and tradeoffs |
-| Explore | qwen3.6 | Fast internal codebase search |
-| Librarian | qwen3.6 | External docs and knowledge search |
-| Atlas | qwen3.6 | Todo-list management |
-| Sisyphus-Junior | qwen3.6 | Delegated simple execution tasks |
-| Multimodal-Looker | GPT-5.5 medium | Image and screenshot analysis |
+| Sisyphus | nan/deepseek-v4-flash | Main orchestrator — plans, delegates, tracks todos |
+| Prometheus | nan/deepseek-v4-flash | Spec-first planner — interviews before coding |
+| Metis | nan/deepseek-v4-flash (temp 0.5) | Pre-planning consultant — gap analysis |
+| Momus | nan/mimo-v2.5 (temp 0.1) | Critical reviewer — adversarial plan review |
+| Oracle | nan/mimo-v2.5 | Architecture decisions and tradeoffs |
+| Explore | nan/qwen3.6 | Fast internal codebase search |
+| Librarian | nan/qwen3.6 | External docs and knowledge search |
+| Atlas | nan/qwen3.6 | Todo-list management |
+| Sisyphus-Junior | nan/qwen3.6 | Delegated simple execution tasks |
+| Multimodal-Looker | nan/mimo-v2.5 | Image and screenshot analysis |
 
-#### Council (Pair Review Pattern)
+> Hephaestus (deep autonomous execution) ships with oh-my-openagent but is disabled here via `disabled_agents`.
 
-The "council" — a Claude Sonnet + GPT-5.5 pair review — is built into oh-my-openagent:
+#### Council (Multi-Lens Review Pattern)
+
+The "council" is a multi-lens adversarial review run entirely on NaN models:
 
 | Trigger | Who acts | What happens |
 |---|---|---|
-| `/start-work` | Prometheus (Claude Sonnet) | Spec-first interview before any coding |
-| High-stakes plan | Momus (GPT-5.5 xhigh) | Adversarial review of the plan |
-| Planning gap check | Metis (Claude Sonnet) | Identifies what's missing before commitment |
-| `/hyperplan` | 5 adversarial critics | Major architectural decisions |
+| `/start-work` | Prometheus (nan/deepseek-v4-flash) | Spec-first interview before any coding |
+| High-stakes plan | Momus (nan/mimo-v2.5) | Adversarial review of the plan |
+| Planning gap check | Metis (nan/deepseek-v4-flash) | Identifies what's missing before commitment |
+| `/hyperplan` | Multiple adversarial critics | Major architectural decisions |
 | `ultrawork` or `ulw` in prompt | Full agent team | Parallel orchestration across all agents |
+| `/council` (custom) | critic (nan/mimo-v2.5) + fact-checker (nan/deepseek-v4-flash) | Multi-lens critique plus citation-checked fact verification (see Section 6.6) |
 
 ### 6.4 TUI and Legacy Config
 
@@ -1783,12 +2014,49 @@ opencode debug info
 # Expected: plugins: - oh-my-openagent@latest (one entry only)
 
 opencode agent list | grep -E "^[A-Za-z].*\(primary|subagent\)"
-# Expected: Sisyphus, Prometheus, Hephaestus, Metis, Momus, Atlas, oracle, explore, librarian, ...
+# Expected: Sisyphus, Prometheus, Metis, Momus, Atlas, oracle, explore, librarian, ...
+# (Hephaestus is disabled and should NOT appear)
 
 opencode debug agent "Sisyphus - ultraworker" | python3 -c \
   "import sys,json; d=json.load(sys.stdin); print('model:', d.get('model'))"
-# Expected: model: {'providerID': 'opencode', 'modelID': 'claude-sonnet-4-6'}
+# Expected: model: {'providerID': 'nan', 'modelID': 'deepseek-v4-flash'}
 ```
+
+---
+
+### 6.6 Shared AGENTS.md, Custom Agents, and Commands
+
+This repo also stores the portable instruction file and the opencode custom agents/commands.
+
+**Shared `AGENTS.md` (repo root)** — portable engineering standards that work with any model. It must be copied byte-identical to **both** opencode and Zed:
+```bash
+cp AGENTS.md ~/.config/opencode/AGENTS.md
+cp AGENTS.md ~/.config/zed/AGENTS.md
+```
+Edit the two installed copies together — they are meant to stay identical, and project-level instruction files override them where they conflict. `AGENTS.md` documents the NaN-only model policy, a non-negotiable **anti-hallucination policy** (tests are the terminal proof of done; verify-before-asserting against official docs; cite or abstain; never auto-install fabricated packages; gate on external signals, not self-confidence), and a **Memory (Engram)** policy: recall-first at task start (treating recalled memory as possibly-outdated prior context), save only verified learnings (`mem_save` gated on an external signal), and never save secrets.
+
+**opencode custom agents (`opencode-agents/`)** → install to `~/.config/opencode/agents/`:
+```bash
+mkdir -p ~/.config/opencode/agents
+cp opencode-agents/*.md ~/.config/opencode/agents/
+```
+
+| Agent | Model | Role |
+|---|---|---|
+| `critic` | nan/mimo-v2.5 | Adversarial, read-only reviewer of any output, plan, claim, diff, or decision. Invoke via `@critic` or `/council`. |
+| `fact-checker` | nan/deepseek-v4-flash | Extracts falsifiable claims and verifies each against primary sources (context7, then web); returns supported / refuted / unverifiable with citations. Invoke via `@fact-checker` or `/council`. |
+
+**opencode commands (`opencode-commands/`)** → install to `~/.config/opencode/commands/`:
+```bash
+mkdir -p ~/.config/opencode/commands
+cp opencode-commands/*.md ~/.config/opencode/commands/
+```
+
+| Command | What it does |
+|---|---|
+| `/council` | Convenes the adversarial council — fans the critic across multiple lenses plus the fact-checker, then synthesizes a verdict with recorded dissents. |
+| `/verify` | Runs the project's real test/lint/build commands, then routes the diff and results through the critic for a binding SHIP / REVISE / BLOCK verdict. |
+| `/smoke` | Harness self-test — confirms the agent is responding on a NaN model and scans the recent opencode log for errors. Run after any config or plugin change. |
 
 ---
 
@@ -1808,73 +2076,137 @@ File: `~/.config/zed/settings.json`
 
 ```json
 {
+  "proxy": "",
+  "theme": {
+    "mode": "dark",
+    "light": "One Light",
+    "dark": "One Dark"
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
   "agent": {
+    "tool_permissions": {
+      "tools": {
+        "terminal": {
+          "default": "allow"
+        },
+        "fetch": {
+          "always_allow": [
+            {
+              "pattern": "^https?://docs\\.docker\\.com"
+            }
+          ]
+        }
+      }
+    },
     "default_model": {
-      "provider": "openai",
+      "provider": "nan",
       "model": "qwen3.6",
       "enable_thinking": false
     },
+    "commit_message_model": {
+      "provider": "nan",
+      "model": "qwen3.6"
+    },
+    "thread_summary_model": {
+      "provider": "nan",
+      "model": "qwen3.6"
+    },
+    "subagent_model": {
+      "provider": "nan",
+      "model": "deepseek-v4-flash"
+    },
     "favorite_models": [
-      { "provider": "openai", "model": "deepseek-v4-flash" },
-      { "provider": "openai", "model": "mimo-v2.5" },
-      { "provider": "openai", "model": "gemma4" },
-      { "provider": "anthropic", "model": "claude-sonnet-4-5" },
-      { "provider": "anthropic", "model": "claude-opus-4" }
+      { "provider": "nan", "model": "deepseek-v4-flash" },
+      { "provider": "nan", "model": "mimo-v2.5" },
+      { "provider": "nan", "model": "gemma4" }
+    ],
+    "model_parameters": [
+      { "provider": "nan", "model": "deepseek-v4-flash", "temperature": 0.2 },
+      { "provider": "nan", "model": "mimo-v2.5", "temperature": 0.2 },
+      { "provider": "nan", "model": "qwen3.6", "temperature": 0.2 }
     ]
   },
   "language_models": {
-    "anthropic": {
-      "available_models": [
-        {
-          "name": "claude-sonnet-4-5",
-          "display_name": "Claude Sonnet (reviewer)",
-          "max_tokens": 200000,
-          "max_output_tokens": 16000
-        },
-        {
-          "name": "claude-opus-4",
-          "display_name": "Claude Opus (architect)",
-          "max_tokens": 200000,
-          "max_output_tokens": 16000
-        }
-      ]
-    },
-    "openai": {
-      "api_url": "https://api.nan.builders/v1",
-      "available_models": [
-        {
-          "name": "qwen3.6",
-          "display_name": "NaN — qwen3.6 (primary)",
-          "max_tokens": 262144
-        },
-        {
-          "name": "deepseek-v4-flash",
-          "display_name": "NaN — deepseek-v4-flash",
-          "max_tokens": 1000000
-        },
-        {
-          "name": "mimo-v2.5",
-          "display_name": "NaN — mimo-v2.5 (multimodal)",
-          "max_tokens": 1000000
-        },
-        {
-          "name": "gemma4",
-          "display_name": "NaN — gemma4",
-          "max_tokens": 262144
-        }
-      ]
+    "openai_compatible": {
+      "nan": {
+        "api_url": "https://api.nan.builders/v1",
+        "available_models": [
+          {
+            "name": "qwen3.6",
+            "display_name": "NaN — qwen3.6 (primary)",
+            "max_tokens": 262144,
+            "capabilities": {
+              "tools": true,
+              "images": false,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true
+            }
+          },
+          {
+            "name": "deepseek-v4-flash",
+            "display_name": "NaN — deepseek-v4-flash",
+            "max_tokens": 1000000,
+            "capabilities": {
+              "tools": true,
+              "images": false,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true
+            }
+          },
+          {
+            "name": "mimo-v2.5",
+            "display_name": "NaN — mimo-v2.5 (multimodal)",
+            "max_tokens": 1000000,
+            "capabilities": {
+              "tools": true,
+              "images": true,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true
+            }
+          },
+          {
+            "name": "gemma4",
+            "display_name": "NaN — gemma4",
+            "max_tokens": 262144,
+            "capabilities": {
+              "tools": true,
+              "images": false,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true
+            }
+          }
+        ]
+      }
     }
   },
   "edit_predictions": {
+    "provider": "open_ai_compatible_api",
     "open_ai_compatible_api": {
-      "api_url": "https://api.nan.builders/v1",
-      "model": "qwen3.6"
+      "api_url": "https://api.nan.builders/v1/completions",
+      "model": "qwen3.6",
+      "prompt_format": "infer",
+      "max_output_tokens": 512
+    }
+  },
+  "context_servers": {
+    "engram": {
+      "command": "/opt/homebrew/bin/engram",
+      "args": ["mcp", "--tools=agent"],
+      "env": {}
     }
   }
 }
 ```
 
-After writing this file, add the NaN API key in Zed's UI: open Zed → `Cmd+,` (macOS) or `Ctrl+,` (Linux) → Extensions → AI → OpenAI → set the API key to your `NAN_API_KEY` value.
+The provider is a custom `nan` entry under `language_models.openai_compatible` (not Zed's built-in OpenAI or Anthropic providers — those are removed). After writing this file, add the NaN API key in Zed's UI: open Zed → `Cmd+,` (macOS) or `Ctrl+,` (Linux) → AI / Language Models → find the `nan` (OpenAI-compatible) provider → set the API key to your `NAN_API_KEY` value.
+
+> **Engram in Zed:** The `context_servers.engram` block registers Engram (Section 8) as a Zed context server. It launches `engram mcp --tools=agent`, which provides the `mem_*` tools (persistent cross-session memory) inside Zed's AI panel. On Linux, change the `command` path from `/opt/homebrew/bin/engram` to wherever `engram` is installed (`which engram`).
 
 ### 7.3 Zed Skills
 
@@ -1891,34 +2223,77 @@ cp -r zed-skills/* ~/.agents/skills/
 
 That's it. Zed auto-discovers all subfolders of `~/.agents/skills/` on next launch.
 
-**Installed skills:**
+**Installed skills (all 12 are vendored in `zed-skills/`):**
 
 | Skill | Auto-invoked when... |
 |-------|---------------------|
-| `karpathy-guidelines` | Writing, reviewing, or refactoring code |
-| `terraform-devops` | Working with `.tf` files or planning infra changes |
-| `k8s-debug` | Diagnosing pod failures, ArgoCD sync issues, HPA problems |
+| `algorithmic-art` | Generating generative/algorithmic art or creative-coding visuals |
+| `canvas-design` | Designing on an HTML canvas or working with 2D canvas graphics |
+| `frontend-design` | Building production-grade frontend components, pages, or apps |
 | `incident-triage` | Investigating outages, errors, or security alerts |
+| `k8s-debug` | Diagnosing pod failures, ArgoCD sync issues, HPA problems |
+| `karpathy-guidelines` | Writing, reviewing, or refactoring code |
+| `skill-creator` | Creating, editing, or validating new skills |
 | `spec-first` | Planning a non-trivial code or infra change |
+| `terraform-devops` | Working with `.tf` files or planning infra changes |
+| `validating-packages` | Confirming a dependency exists in its registry before adding it |
+| `verifying-changes` | Verifying a change actually works before claiming it is done |
+| `webapp-testing` | Testing or debugging a local web app via a headless browser |
 
 **Verify installation:**
 
-Zed → `Cmd+,` → AI → Skills → User tab — all 5 skills should appear.
+Zed → `Cmd+,` → AI → Skills → User tab — all 12 skills should appear.
 
 ---
 
-## 8. Obsidian Vault
+## 8. Engram (Persistent Memory)
+
+Engram is a local, third-party persistent-memory store for AI agents. It backs **all three** tools in this setup, giving them a shared, recallable long-term memory via the `mem_*` MCP tools.
+
+### 8.1 What it is
+
+- **Local and zero-dependency.** Engram is a single Go binary (`/opt/homebrew/bin/engram`, v1.16.3 at time of writing) backed by a local SQLite database at `~/.engram/engram.db`. It has no model provider of its own — it only stores and retrieves observations.
+- **Purpose.** Persistent cross-session memory: decisions, gotchas, fixes, and conventions survive across sessions and across tools, recalled via the `mem_*` tools (`mem_search`, `mem_context`, `mem_save`, etc.).
+
+### 8.2 Install
+
+```bash
+brew install gentleman-programming/tap/engram
+```
+
+This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary installs to `/opt/homebrew/bin/engram` on Apple Silicon macOS. The same tap also ships `gentle-ai` (`brew install gentleman-programming/tap/gentle-ai`).
+
+> **Linux note:** Paths in the configs below assume the macOS Homebrew prefix `/opt/homebrew`. On Linux, install per the tap's instructions and update the `engram` paths in `~/.config/zed/settings.json` (`context_servers.engram.command`) and `~/.claude/hooks/engram-sync.py` (`ENGRAM`) to match `which engram`.
+
+### 8.3 What it backs
+
+| Tool | Wiring | File |
+|---|---|---|
+| opencode | `mcp.engram` MCP server (`engram mcp --tools=agent`) | `~/.config/opencode/opencode.jsonc` |
+| Zed | `context_servers.engram` context server | `~/.config/zed/settings.json` |
+| Claude Code | `engram-sync.sh` / `engram-sync.py` hooks mirror Claude memory files into Engram on Stop + PostCompact | `~/.claude/hooks/` (see Section 5.7) |
+
+### 8.4 Shared memory policy (AGENTS.md)
+
+The shared `AGENTS.md` (Section 6.6) defines the **"Memory (Engram)"** policy that opencode and Zed follow:
+- **Recall first** — at the start of a non-trivial task, search memory for prior decisions/gotchas/conventions, treating results as prior context that may be outdated and verifying before acting on them.
+- **Save only verified learnings** — call `mem_save` only when a learning is backed by an external signal (tests passed, a doc confirmed it, a command/`file:line` verified it, or the user confirmed it), and record that evidence in the saved memory.
+- **Never save secrets** — no keys, tokens, passwords, or `.env` contents.
+
+---
+
+## 9. Obsidian Vault
 
 The Obsidian vault is the canonical source of truth for all Claude Code configuration. It is a git repository that auto-syncs after every Claude Code session.
 
-### 8.1 Clone the Vault
+### 9.1 Clone the Vault
 
 ```bash
 cd ~/Documents
 git clone git@github.com:yosoyvilla/obsidian-vault.git
 ```
 
-### 8.2 Install Obsidian
+### 9.2 Install Obsidian
 
 macOS: `brew install --cask obsidian`
 
@@ -1930,21 +2305,34 @@ chmod +x Obsidian-*.AppImage
 
 Open the vault at `~/Documents/obsidian-vault/`.
 
-### 8.3 Vault Structure
+### 9.3 Vault Structure
 
 ```
 obsidian-vault/
+├── architecture/        # Architecture notes and diagrams
+├── decisions/           # ADR-style decision records
+├── patterns/            # Reusable engineering patterns
+├── projects/            # Per-project notes
+├── runbooks/            # Operational runbooks
+├── templates/           # Note templates
 └── claude-code/
-    ├── setup.md          # @-imported in ~/.claude/CLAUDE.md every session
-    ├── global-rules.md   # Human-readable copy of CLAUDE.md rules
-    ├── agents/           # Mirrored from ~/.claude/agents/
-    ├── skills/           # Mirrored from ~/.claude/skills/
-    ├── rules/            # Mirrored from ~/.claude/rules/
-    ├── settings.json     # Mirrored from ~/.claude/settings.json
-    └── memory/           # Mirrored from all project memories
+    ├── setup.md                  # @-imported in ~/.claude/CLAUDE.md every session
+    ├── global-rules.md           # Human-readable copy of CLAUDE.md rules
+    ├── documentation-style.md    # Documentation style guide
+    ├── multi-project-workflow.md # Multi-project workflow notes
+    ├── tips-and-tricks.md        # Tips and tricks
+    ├── kubernetes.md             # Shared k8s rule (copy)
+    ├── terraform.md              # Shared terraform rule (copy)
+    ├── security-baseline.md      # Shared security rule (copy)
+    ├── agents/                   # Mirrored from ~/.claude/agents/
+    ├── skills/                   # Mirrored from ~/.claude/skills/
+    ├── rules/                    # Mirrored from ~/.claude/rules/
+    ├── agent-memory/             # Mirrored from ~/.claude/agent-memory/
+    ├── settings.json             # Mirrored from ~/.claude/settings.json
+    └── memory/                   # Mirrored from all project memories
 ```
 
-### 8.4 How It Stays In Sync
+### 9.4 How It Stays In Sync
 
 | Mechanism | When | What |
 |---|---|---|
@@ -1955,7 +2343,7 @@ obsidian-vault/
 
 ---
 
-## 9. Environment Variables
+## 10. Environment Variables
 
 Add to `~/.zshrc`. Never commit API keys to git.
 
@@ -1970,10 +2358,13 @@ export NEW_RELIC_API_KEY="NRAK-..."
 # HashiCorp Vault
 export VAULT_ADDR="https://vault.helmcode.com"
 
-# DigitalOcean (if used)
-export DO_PAT="dop_v1_..."
+# DigitalOcean — API token + Spaces (S3-compatible) credentials
+export DIGITALOCEAN_TOKEN="dop_v1_..."
 export SPACES_ACCESS_KEY_ID="..."
+export SPACES_SECRET_ACCESS_KEY="..."
 ```
+
+> **Set on-demand, not standing exports:** `SCALR_TOKEN` (Varsity Scalr deploys) and `AIRBYTE_TOKEN` (CedarPlanters Airbyte) are exported only for the session that needs them — they are not kept in `~/.zshrc`.
 
 **Credential management by type:**
 
@@ -1987,7 +2378,7 @@ export SPACES_ACCESS_KEY_ID="..."
 
 ---
 
-## 10. Projects Structure
+## 11. Projects Structure
 
 ```
 ~/Documents/
@@ -2015,7 +2406,7 @@ Per-project Claude context:
 
 ---
 
-## 11. Quick Reference
+## 12. Quick Reference
 
 ### Claude Code
 
@@ -2053,17 +2444,17 @@ ultrawork                # (in any prompt) Full parallel orchestration
 
 | Scenario | Tool | Model |
 |---|---|---|
-| Architecture / planning | Claude Code | opus (via opusplan) |
-| Code implementation | Claude Code | sonnet (via opusplan) |
+| Architecture / planning | Claude Code | opus[1m] (Opus, 1M context) |
+| Code implementation | Claude Code | sonnet / opus[1m] |
 | Security/cost review | Claude Code | haiku (advisory agents) |
-| Fast codebase search | opencode | qwen3.6 (explore) |
-| Complex autonomous task | opencode | GPT-5.5 (hephaestus) |
-| Plan review (critical) | opencode | GPT-5.5 xhigh (momus) |
-| Zed inline editing | Zed | qwen3.6 (NaN) |
+| Fast codebase search | opencode | nan/qwen3.6 (explore) |
+| Orchestration / deep work | opencode | nan/deepseek-v4-flash (sisyphus, deep) |
+| Plan review (critical) | opencode | nan/mimo-v2.5 (momus) |
+| Zed inline editing | Zed | nan/qwen3.6 (NaN) |
 
 ---
 
-## 12. Post-Install Checklist
+## 13. Post-Install Checklist
 
 Copy this list and check off each item:
 
@@ -2080,31 +2471,41 @@ Copy this list and check off each item:
 - [ ] Installed (`claude --version`)
 - [ ] Authenticated (run `claude`)
 - [ ] `~/.claude/CLAUDE.md` created
-- [ ] `~/.claude/settings.json` created
-- [ ] `~/.claude/agents/` populated (18 agent files)
-- [ ] `~/.claude/skills/` populated (10 skills)
-- [ ] `~/.claude/rules/` created (4 rule files)
+- [ ] `~/.claude/settings.json` created (model `opus[1m]`)
+- [ ] `~/.claude/agents/` populated (19 agent files, incl. `doc-reviewer`)
+- [ ] `~/.claude/skills/` populated
+- [ ] `~/.claude/rules/` created
 - [ ] `~/.claude/hooks/auto-sync.sh` created and executable
+- [ ] `~/.claude/hooks/engram-sync.sh` + `engram-sync.py` created and executable
+
+**Engram**
+- [ ] Installed (`engram --version` → 1.16.x)
+- [ ] DB exists at `~/.engram/engram.db`
+- [ ] First-time backfill run if Engram already had memories (`~/.claude/hooks/engram-sync.py backfill`)
 
 **Obsidian Vault**
 - [ ] `git clone git@github.com:yosoyvilla/obsidian-vault.git ~/Documents/obsidian-vault`
 - [ ] Obsidian app installed and vault opened
 
 **opencode**
-- [ ] Installed (`opencode --version`)
-- [ ] Authenticated with OpenCode Zen
+- [ ] Installed via brew tap (`brew install anomalyco/tap/opencode`)
+- [ ] `NAN_API_KEY` set (no OpenCode Zen subscription needed)
 - [ ] oh-my-openagent in plugin cache
-- [ ] `~/.config/opencode/opencode.jsonc` created
-- [ ] `~/.config/opencode/oh-my-openagent.json` created
+- [ ] `~/.config/opencode/opencode.jsonc` created (NaN-only, `mcp.engram` enabled)
+- [ ] `~/.config/opencode/oh-my-openagent.json` created (NaN-only, hephaestus disabled)
+- [ ] `~/.config/opencode/AGENTS.md` (byte-identical to repo `AGENTS.md`)
+- [ ] `~/.config/opencode/agents/` populated (critic, fact-checker)
+- [ ] `~/.config/opencode/commands/` populated (council, verify, smoke)
 - [ ] `~/.config/opencode/tui.json` created (empty plugins)
 - [ ] `~/.opencode/opencode.json` created (empty plugins)
 - [ ] Verification: `opencode debug info` shows only `oh-my-openagent@latest`
 
 **Zed**
 - [ ] Installed
-- [ ] `~/.config/zed/settings.json` created
-- [ ] NaN API key set in Zed settings UI
-- [ ] Zed skills installed: `ls ~/.agents/skills/` → shows 5+ skill folders
+- [ ] `~/.config/zed/settings.json` created (NaN openai_compatible, engram context server)
+- [ ] `~/.config/zed/AGENTS.md` (byte-identical to repo `AGENTS.md`)
+- [ ] NaN API key set in Zed settings UI (the `nan` provider)
+- [ ] Zed skills installed: `ls ~/.agents/skills/` → shows 12 skill folders
 - [ ] Skills visible in Zed → Settings → AI → Skills → User tab
 
 **Terminal Tools**
@@ -2123,7 +2524,7 @@ Copy this list and check off each item:
 
 ---
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 ### oh-my-openagent not loading
 

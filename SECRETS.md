@@ -23,22 +23,41 @@ Then reload: `source ~/.zshrc`
   export NAN_API_KEY="sk-..."
   ```
 
-### SCALR_TOKEN
+### DIGITALOCEAN_TOKEN
+- **Used by:** `doctl` CLI and Terraform DigitalOcean provider (Kashport project)
+- **Purpose:** Manage DigitalOcean resources (droplets, DNS, Spaces buckets, etc.)
+- **Get it:** DigitalOcean Console → API → Tokens → Generate New Token (Personal Access Token)
+- **Set it:**
+  ```zsh
+  export DIGITALOCEAN_TOKEN="dop_v1_..."
+  ```
+
+### SPACES_ACCESS_KEY_ID / SPACES_SECRET_ACCESS_KEY
+- **Used by:** S3-compatible clients (aws CLI with custom endpoint, Terraform, app uploads) for DigitalOcean Spaces (Kashport project)
+- **Purpose:** Read/write objects in DigitalOcean Spaces (S3-compatible object storage)
+- **Get it:** DigitalOcean Console → Spaces → Settings → Access Keys → Generate New Key (gives both the key ID and the secret)
+- **Set it:**
+  ```zsh
+  export SPACES_ACCESS_KEY_ID="..."
+  export SPACES_SECRET_ACCESS_KEY="..."
+  ```
+
+### SCALR_TOKEN (set on-demand)
 - **Used by:** `skills/scalr-deploy.md` skill (Varsity project only)
 - **Purpose:** Authenticate with Scalr remote Terraform backend to trigger plans and check workspace status
 - **Get it:** Scalr UI → `<your-account>` → User Settings → API Tokens → Create token
-- **Set it:**
+- **Set it:** Export only in the session that needs it — not a standing export in `~/.zshrc`:
   ```zsh
   export SCALR_TOKEN="..."
   ```
 
-### AIRBYTE_TOKEN
+### AIRBYTE_TOKEN (set on-demand)
 - **Used by:** `agents/airbyte.md` agent (CedarPlanters project)
 - **Purpose:** Authenticate with Airbyte API (Cloud or self-hosted) to manage connectors and trigger syncs
 - **Get it:**
   - Airbyte Cloud: Settings → Applications → Create Application token
   - Self-hosted: Settings → Authentication → API tokens
-- **Set it:**
+- **Set it:** Export only in the session that needs it — not a standing export in `~/.zshrc`:
   ```zsh
   export AIRBYTE_TOKEN="..."
   ```

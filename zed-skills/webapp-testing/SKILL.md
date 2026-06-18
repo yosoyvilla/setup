@@ -1,0 +1,1 @@
+/Users/davidvilla/.claude/skills/webapp-testing/SKILL.md
