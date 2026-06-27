@@ -373,7 +373,7 @@ export PATH="$HOME/.bun/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # ── HashiCorp Vault ───────────────────────────────────────────────
-export VAULT_ADDR="https://vault.helmcode.com"
+export VAULT_ADDR="https://vault.example.com"
 
 # ── Aliases ───────────────────────────────────────────────────────
 alias k=kubectl
@@ -758,10 +758,10 @@ For tasks spanning multiple sessions (large migrations, multi-PR features), crea
 
 ### Multi-Project Structure
 Projects live in `~/Documents/` with per-project `.claude/CLAUDE.md` files:
-- `360latam/` - Real estate portals (FincaRaiz, Encuentra24, Infocasas, Yapo)
-- `cedarplanters/` - E-commerce (Shopify, warehousing, infra)
-- `kashport/` - FinTech/payments (Monyte)
-- `Varsity/` - EdTech (EKS, Terraform, large infra)
+- `project-b/` - Real estate portals (Portal-1, Portal-2, Portal-3, Portal-4)
+- `project-c/` - E-commerce (Shopify, warehousing, infra)
+- `project-d/` - FinTech/payments (Project-d)
+- `Project-a/` - EdTech (EKS, Terraform, large infra)
 - `Personal/` - Side projects (Crewgent, etc.)
 
 Shared rules: `~/.claude/rules/` (terraform, kubernetes, security-baseline).
@@ -1472,7 +1472,7 @@ mkdir -p ~/.claude/rules
 # Terraform Conventions
 
 ## Naming
-- Resources: `<project>-<env>-<resource>` (e.g., `cedar-prod-rds`)
+- Resources: `<project>-<env>-<resource>` (e.g., `project-c-prod-rds`)
 - Modules: `terraform-<provider>-<resource>`
 - Variables: snake_case, descriptive
 - Outputs: snake_case, prefix with resource type
@@ -1559,7 +1559,7 @@ All resources must have: Name, Environment, Team, ManagedBy=terraform
 
 ```markdown
 # Go Conventions
-# Applies to: Varsity Go services (Go 1.17+)
+# Applies to: Project-a Go services (Go 1.17+)
 
 ## Code Style
 - `gofmt` always applied
@@ -1629,10 +1629,10 @@ cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \
   && log "settings.json synced" || log "settings.json copy failed"
 
 sync_dir "$CLAUDE_DIR/agent-memory"                                               "$VAULT/claude-code/agent-memory"        "Agent Memory"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-360latam/memory"      "$VAULT/claude-code/memory/360latam"     "Memory/360latam"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-cedarplanters/memory" "$VAULT/claude-code/memory/cedarplanters" "Memory/CedarPlanters"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-Varsity/memory"       "$VAULT/claude-code/memory/varsity"      "Memory/Varsity"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-kashport/memory"      "$VAULT/claude-code/memory/kashport"     "Memory/Kashport"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-b/memory"      "$VAULT/claude-code/memory/project-b"     "Memory/project-b"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-c/memory" "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-Project-a/memory"       "$VAULT/claude-code/memory/project-a"      "Memory/Project-a"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-d/memory"      "$VAULT/claude-code/memory/project-d"     "Memory/Project-d"
 
 cd "$VAULT" || { log "Cannot cd to vault"; exit 0; }
 if git status --porcelain | grep -q .; then
@@ -2248,11 +2248,11 @@ Add to `~/.zshrc`. Never commit API keys to git.
 # Get key at: https://nan.builders
 export NAN_API_KEY="sk-..."
 
-# New Relic (Varsity project observability)
+# New Relic (Project-a project observability)
 export NEW_RELIC_API_KEY="NRAK-..."
 
 # HashiCorp Vault
-export VAULT_ADDR="https://vault.helmcode.com"
+export VAULT_ADDR="https://vault.example.com"
 
 # DigitalOcean — API token + Spaces (S3-compatible) credentials
 export DIGITALOCEAN_TOKEN="dop_v1_..."
@@ -2260,7 +2260,7 @@ export SPACES_ACCESS_KEY_ID="..."
 export SPACES_SECRET_ACCESS_KEY="..."
 ```
 
-> **Set on-demand, not standing exports:** `SCALR_TOKEN` (Varsity Scalr deploys) and `AIRBYTE_TOKEN` (CedarPlanters Airbyte) are exported only for the session that needs them — they are not kept in `~/.zshrc`.
+> **Set on-demand, not standing exports:** `SCALR_TOKEN` (Project-a Scalr deploys) and `AIRBYTE_TOKEN` (Project-c Airbyte) are exported only for the session that needs them — they are not kept in `~/.zshrc`.
 
 **Credential management by type:**
 
@@ -2278,13 +2278,13 @@ export SPACES_SECRET_ACCESS_KEY="..."
 
 ```
 ~/Documents/
-├── 360latam/          # Real estate portals: FincaRaiz, Encuentra24, Infocasas, Yapo
+├── project-b/          # Real estate portals: Portal-1, Portal-2, Portal-3, Portal-4
 │                      # PHP, GCP, GKE, Terragrunt, PostgreSQL
-├── cedarplanters/     # E-commerce: Shopify, warehousing, infra
+├── project-c/     # E-commerce: Shopify, warehousing, infra
 │                      # Node.js, Shopify Functions, Airbyte, ArgoCD
-├── kashport/          # FinTech/payments: Monyte
+├── project-d/          # FinTech/payments: Project-d
 │                      # Python/Django, Dokploy, DigitalOcean
-├── Varsity/           # EdTech
+├── Project-a/           # EdTech
 │                      # Go, EKS, Terraform, New Relic, Scalr
 ├── Personal/          # Side projects (Crewgent, etc.)
 │                      # TypeScript, Next.js, Supabase

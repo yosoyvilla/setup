@@ -58,7 +58,7 @@ tags = {
 }
 ```
 
-Missing any of these → OPA policy failure on Scalr (Varsity) or manual flag elsewhere.
+Missing any of these → OPA policy failure on Scalr (Project-a) or manual flag elsewhere.
 
 ---
 
@@ -66,12 +66,12 @@ Missing any of these → OPA policy failure on Scalr (Varsity) or manual flag el
 
 | Project | Backend | Notes |
 |---------|---------|-------|
-| Varsity (tf-aws) | Scalr | Remote runs on Scalr; `terraform plan/apply` triggers remote execution |
-| CedarPlanters | S3 + DynamoDB | Bucket: `devops-terraform-cedar`, region: us-east-1 |
-| Kashport | S3 + DynamoDB | Region: us-east-2, workspace per environment |
-| 360latam | GCS or S3 | Per-account bucket |
+| Project-a (tf-aws) | Scalr | Remote runs on Scalr; `terraform plan/apply` triggers remote execution |
+| Project-c | S3 + DynamoDB | Bucket: `devops-terraform-project-c`, region: us-east-1 |
+| Project-d | S3 + DynamoDB | Region: us-east-2, workspace per environment |
+| project-b | GCS or S3 | Per-account bucket |
 
-**Scalr (Varsity):** Never run `terraform apply` locally against Scalr-managed state. Push the branch and confirm apply in the Scalr UI. OPA policies enforce tagging and instance type allowlists.
+**Scalr (Project-a):** Never run `terraform apply` locally against Scalr-managed state. Push the branch and confirm apply in the Scalr UI. OPA policies enforce tagging and instance type allowlists.
 
 ---
 
@@ -101,9 +101,9 @@ Any `aws_rds_instance`, `aws_eks_cluster`, `aws_elasticache_cluster` destruction
 ```
 <project>-<env>-<resource-type>
 Examples:
-  cedar-prod-rds
-  varsity-vtpr-eks
-  kashport-staging-sg-web
+  project-c-prod-rds
+  project-a-vtpr-eks
+  project-d-staging-sg-web
 ```
 
 Modules: `terraform-<provider>-<resource>` (e.g., `terraform-aws-eks-cluster`)

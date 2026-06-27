@@ -35,14 +35,14 @@ cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \
 sync_dir "$CLAUDE_DIR/agent-memory" "$VAULT/claude-code/agent-memory" "Agent Memory"
 
 # Sync project-specific memories
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-360latam/memory" \
-         "$VAULT/claude-code/memory/360latam"  "Memory/360latam"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-cedarplanters/memory" \
-         "$VAULT/claude-code/memory/cedarplanters" "Memory/CedarPlanters"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-Varsity/memory" \
-         "$VAULT/claude-code/memory/varsity" "Memory/Varsity"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-kashport/memory" \
-         "$VAULT/claude-code/memory/kashport" "Memory/Kashport"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-b/memory" \
+         "$VAULT/claude-code/memory/project-b"  "Memory/project-b"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-c/memory" \
+         "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-Project-a/memory" \
+         "$VAULT/claude-code/memory/project-a" "Memory/Project-a"
+sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-d/memory" \
+         "$VAULT/claude-code/memory/project-d" "Memory/Project-d"
 
 # Push vault if there are changes
 cd "$VAULT" || { log "Cannot cd to vault"; exit 0; }

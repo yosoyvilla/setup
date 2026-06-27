@@ -1,12 +1,12 @@
 ---
 name: scalr-deploy
-description: Use when deploying Terraform changes for Varsity via Scalr. Scalr acts as the Terraform remote backend — plan and apply run remotely on Scalr, not locally.
+description: Use when deploying Terraform changes for Project-a via Scalr. Scalr acts as the Terraform remote backend — plan and apply run remotely on Scalr, not locally.
 user-invocable: true
 ---
 
 Deploy Terraform via Scalr: $ARGUMENTS
 
-## Context (Varsity only)
+## Context (Project-a only)
 - **tf-aws monorepo**, multi-account: vtpr, vtst, bipr, bist, lppr, lpst, tooling
 - Workspace naming: `<account>-<module>` (e.g., `vtpr-eks`, `vtst-rds`)
 - Scalr = Terraform remote backend. `terraform plan/apply` run on Scalr's infrastructure.

@@ -39,7 +39,7 @@ kubectl logs <pod> -n <namespace> --previous --tail=200
 kubectl logs -l app=<name> -n <namespace> --tail=100 --all-containers
 ```
 
-**Metrics:** Check New Relic (Varsity), CloudWatch, or Uptime Kuma dashboards before assuming.
+**Metrics:** Check New Relic (Project-a), CloudWatch, or Uptime Kuma dashboards before assuming.
 
 **Recent changes:**
 ```bash

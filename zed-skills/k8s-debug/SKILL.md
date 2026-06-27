@@ -114,12 +114,12 @@ kubectl get nodes -o wide        # Ready status, OS, version
 
 | Cluster | How to switch |
 |---------|--------------|
-| Varsity tooling | `kubectx usw2-tooling-eks-pr` |
-| Varsity staging | `kubectx usw2-staging-eks-st` |
-| Varsity prod | `kubectx usw2-prod-eks-pr` |
-| CedarPlanters | `AWS_PROFILE=cedar aws eks update-kubeconfig --name cedar-planters-eks --region us-east-1` |
-| Kashport | `aws eks update-kubeconfig --name kashport-eks --region us-east-2` |
-| 360latam GKE staging | `gcloud container clusters get-credentials k8s-e24gcp-staging --zone us-central1-a --project e24gcp-staging` |
-| 360latam GKE prod | `gcloud container clusters get-credentials k8s-e24gcp-prod --zone us-central1-a --project e24gcp-prod` |
+| Project-a tooling | `kubectx usw2-tooling-eks-pr` |
+| Project-a staging | `kubectx usw2-staging-eks-st` |
+| Project-a prod | `kubectx usw2-prod-eks-pr` |
+| Project-c | `AWS_PROFILE=project-c aws eks update-kubeconfig --name project-c-planters-eks --region us-east-1` |
+| Project-d | `aws eks update-kubeconfig --name project-d-eks --region us-east-2` |
+| project-b GKE staging | `gcloud container clusters get-credentials k8s-e24gcp-staging --zone us-central1-a --project e24gcp-staging` |
+| project-b GKE prod | `gcloud container clusters get-credentials k8s-e24gcp-prod --zone us-central1-a --project e24gcp-prod` |
 
-**CedarPlanters note:** kubectl context drifts to GKE between sessions. Always re-run the update-kubeconfig command at the start of a Cedar session.
+**Project-c note:** kubectl context drifts to GKE between sessions. Always re-run the update-kubeconfig command at the start of a Project-c session.

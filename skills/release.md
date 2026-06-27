@@ -1,6 +1,6 @@
 ---
 name: release
-description: Use when creating a project release across any project — generates changelog, bumps version, tags, and publishes a GitHub or Bitbucket release. Covers Node/pnpm (CedarPlanters), Go (Varsity), PHP/Python (360latam), and Terraform modules.
+description: Use when creating a project release across any project — generates changelog, bumps version, tags, and publishes a GitHub or Bitbucket release. Covers Node/pnpm (Project-c), Go (Project-a), PHP/Python (project-b), and Terraform modules.
 user-invocable: true
 ---
 
@@ -27,16 +27,16 @@ Skip: merge commits, automated commits, trivial dependency bumps.
 
 ## Step 3 — Update Version File
 
-**CedarPlanters (pnpm monorepo, TypeScript):**
+**Project-c (pnpm monorepo, TypeScript):**
 Update `package.json` version field. If changesets are configured: use `pnpm changeset version` instead of editing manually.
 
-**Varsity (Go services):**
+**Project-a (Go services):**
 `go.mod` does not change between releases — the git tag is the version. Check for a `version.go` file with a `Version` var; if build uses `-ldflags "-X main.Version=vX.Y.Z"`, no file to update. Tag is the source of truth.
 
-**360latam (PHP/Python):**
+**project-b (PHP/Python):**
 Check `setup.py`, `pyproject.toml`, or project-specific version constant. Bitbucket repos may not have a version file — tag only.
 
-**Varsity tf-aws (Terraform modules):**
+**Project-a tf-aws (Terraform modules):**
 No version file. Tag format: `<module-name>/vX.Y.Z` (e.g., `terraform-aws-eks-cluster/v1.2.0`).
 
 ## Step 4 — Commit + Tag
@@ -50,7 +50,7 @@ git push origin vX.Y.Z
 
 ## Step 5 — Create Release
 
-**GitHub (Varsity, CedarPlanters, Personal — yosoyvilla or crewgent account):**
+**GitHub (Project-a, Project-c, Personal — yosoyvilla or crewgent account):**
 ```bash
 gh release create vX.Y.Z \
   --title "vX.Y.Z" \
@@ -59,7 +59,7 @@ gh release create vX.Y.Z \
 # Add --prerelease for RC/beta
 ```
 
-**Bitbucket (360latam — Bitbucket Pipelines):**
+**Bitbucket (project-b — Bitbucket Pipelines):**
 `gh` does not support Bitbucket. Create release via Bitbucket UI (Repository → Tags → Create tag) or Bitbucket API. A Bitbucket Pipeline on the tag may auto-deploy — verify pipeline config first.
 
 ## Step 6 — Verify

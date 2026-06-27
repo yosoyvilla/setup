@@ -3,7 +3,7 @@
 > Obsidian: ~/Documents/obsidian-vault/claude-code/terraform.md
 
 ## Naming
-- Resources: `<project>-<env>-<resource>` (e.g., `cedar-prod-rds`)
+- Resources: `<project>-<env>-<resource>` (e.g., `project-c-prod-rds`)
 - Modules: `terraform-<provider>-<resource>` (e.g., `terraform-aws-eks-cluster`)
 - Variables: snake_case, descriptive
 - Outputs: snake_case, prefix with resource type

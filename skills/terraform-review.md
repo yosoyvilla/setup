@@ -3,9 +3,9 @@ name: terraform-review
 description: Reviews Terraform code for best practices, security, and cost. Use when reviewing .tf files, planning infrastructure changes, or checking Terraform plans.
 ---
 
-Systematically check the following. Apply the AWS sections to Varsity/CedarPlanters/Kashport, the GCP section to 360latam.
+Systematically check the following. Apply the AWS sections to Project-a/Project-c/Project-d, the GCP section to project-b.
 
-## Security — AWS (Varsity, CedarPlanters, Kashport)
+## Security — AWS (Project-a, Project-c, Project-d)
 - No hardcoded secrets, API keys, or passwords in `.tf` files
 - IAM: least privilege — no `*` actions on `*` resources in prod
 - Encryption at rest: S3, RDS, EBS, EFS
@@ -13,7 +13,7 @@ Systematically check the following. Apply the AWS sections to Varsity/CedarPlant
 - Security groups: no `0.0.0.0/0` ingress on non-HTTP(S) ports
 - KMS keys for sensitive data
 
-## Security — GCP (360latam)
+## Security — GCP (project-b)
 - No `allUsers` or `allAuthenticatedUsers` on storage buckets or APIs
 - Use predefined `roles/` — custom roles only when predefined don't fit
 - Cloud SQL: `require_ssl = true`, `ipv4_enabled = false` (private-only unless justified)
@@ -30,12 +30,12 @@ Systematically check the following. Apply the AWS sections to Varsity/CedarPlant
 - Spot/preemptible instances for non-critical or batch workloads
 
 ## Best Practices
-- Remote state with locking (S3+DynamoDB for AWS; Scalr for Varsity tf-aws)
+- Remote state with locking (S3+DynamoDB for AWS; Scalr for Project-a tf-aws)
 - Data sources over hardcoded resource IDs
 - Module versions pinned — not `source = "module?ref=main"`
 - All resources tagged: `Name`, `Environment`, `Team`, `ManagedBy=terraform`
 - `terraform fmt` applied, `terraform validate` clean
-- `tflint` passes (enforced in Varsity CI via GitHub Actions)
+- `tflint` passes (enforced in Project-a CI via GitHub Actions)
 
 ## Reliability
 - Multi-AZ for production databases and critical services
