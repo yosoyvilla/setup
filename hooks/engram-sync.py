@@ -18,16 +18,18 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
 from datetime import datetime
 
 HOME = os.path.expanduser("~")
+HOME_ENC = HOME.replace("/", "-")  # Claude encodes the home path into the project dir name
 PROJECTS = os.path.join(HOME, ".claude", "projects")
 MANIFEST = os.path.join(HOME, ".claude", "engram-sync-state.json")
 LOG = os.path.join(HOME, ".claude", "engram-sync.log")
-ENGRAM = "/opt/homebrew/bin/engram"
+ENGRAM = shutil.which("engram") or "/opt/homebrew/bin/engram"  # resolve on PATH; fall back to Homebrew path
 
 # Real secret VALUES (not mere mentions of "password"). Files matching are skipped.
 SECRET_RE = re.compile(
@@ -53,9 +55,9 @@ def iter_memory_files():
 def project_for(path: str) -> str:
     # path = .../projects/<projdir>/memory/<file>.md  ->  <projdir>
     projdir = os.path.basename(os.path.dirname(os.path.dirname(path)))
-    if projdir == "-Users-user":
+    if projdir == HOME_ENC:
         return "global"
-    prefix = "-Users-user-Documents-"
+    prefix = HOME_ENC + "-Documents-"
     name = projdir[len(prefix):] if projdir.startswith(prefix) else projdir
     return name.lower()
 

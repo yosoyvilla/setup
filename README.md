@@ -1600,11 +1600,15 @@ File: `~/.claude/hooks/auto-sync.sh`
 
 ```bash
 #!/bin/bash
-# Syncs Claude config to Obsidian vault after each session.
-# Triggered by Stop and PostCompact hooks (async).
+# Auto-sync Claude config to Obsidian vault after each session.
+# Called by the Stop and PostCompact hooks in settings.json (async).
+# Syncs: memory, agents, skills, rules
 
 CLAUDE_DIR="$HOME/.claude"
-MEMORY_SRC="$CLAUDE_DIR/projects/-Users-user/memory"
+# Claude encodes the cwd into the project dir name (/Users/alice -> -Users-alice).
+# Derive it from the real $HOME so this works for any user/machine.
+HOME_ENC="${HOME//\//-}"
+MEMORY_SRC="$CLAUDE_DIR/projects/$HOME_ENC/memory"
 VAULT="$HOME/Documents/obsidian-vault"
 LOG="$CLAUDE_DIR/sync.log"
 
@@ -1620,20 +1624,31 @@ sync_dir() {
   fi
 }
 
+# Sync all Claude config to vault
 sync_dir "$MEMORY_SRC"              "$VAULT/claude-code/memory"  "Memory"
 sync_dir "$CLAUDE_DIR/agents"       "$VAULT/claude-code/agents"  "Agents"
 sync_dir "$CLAUDE_DIR/skills"       "$VAULT/claude-code/skills"  "Skills"
 sync_dir "$CLAUDE_DIR/rules"        "$VAULT/claude-code/rules"   "Rules"
+sync_dir "$CLAUDE_DIR/hooks"        "$VAULT/claude-code/hooks"   "Hooks"
 
+# Sync settings.json (hooks, plugins, env vars, model)
 cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \
   && log "settings.json synced" || log "settings.json copy failed"
 
-sync_dir "$CLAUDE_DIR/agent-memory"                                               "$VAULT/claude-code/agent-memory"        "Agent Memory"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-b/memory"      "$VAULT/claude-code/memory/project-b"     "Memory/project-b"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-c/memory" "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-Project-a/memory"       "$VAULT/claude-code/memory/project-a"      "Memory/Project-a"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-d/memory"      "$VAULT/claude-code/memory/project-d"     "Memory/Project-d"
+# Sync agent memories
+sync_dir "$CLAUDE_DIR/agent-memory" "$VAULT/claude-code/agent-memory" "Agent Memory"
 
+# Sync project-specific memories — discovered dynamically, so it works for any
+# user and any set of projects (no hardcoded usernames or project names).
+for proj_mem in "$CLAUDE_DIR"/projects/*/memory; do
+  [ -d "$proj_mem" ] || continue
+  enc="$(basename "$(dirname "$proj_mem")")"
+  [ "$enc" = "$HOME_ENC" ] && continue          # home/global memory already synced above
+  name="${enc##*-Documents-}"                    # decode to a clean project name
+  sync_dir "$proj_mem" "$VAULT/claude-code/memory/$name" "Memory/$name"
+done
+
+# Push vault if there are changes
 cd "$VAULT" || { log "Cannot cd to vault"; exit 0; }
 if git status --porcelain | grep -q .; then
   git add -A

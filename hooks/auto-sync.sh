@@ -4,7 +4,10 @@
 # Syncs: memory, agents, skills, rules
 
 CLAUDE_DIR="$HOME/.claude"
-MEMORY_SRC="$CLAUDE_DIR/projects/-Users-user/memory"
+# Claude encodes the cwd into the project dir name (/Users/alice -> -Users-alice).
+# Derive it from the real $HOME so this works for any user/machine.
+HOME_ENC="${HOME//\//-}"
+MEMORY_SRC="$CLAUDE_DIR/projects/$HOME_ENC/memory"
 VAULT="$HOME/Documents/obsidian-vault"
 LOG="$CLAUDE_DIR/sync.log"
 
@@ -34,15 +37,15 @@ cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \
 # Sync agent memories
 sync_dir "$CLAUDE_DIR/agent-memory" "$VAULT/claude-code/agent-memory" "Agent Memory"
 
-# Sync project-specific memories
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-b/memory" \
-         "$VAULT/claude-code/memory/project-b"  "Memory/project-b"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-c/memory" \
-         "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-Project-a/memory" \
-         "$VAULT/claude-code/memory/project-a" "Memory/Project-a"
-sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-d/memory" \
-         "$VAULT/claude-code/memory/project-d" "Memory/Project-d"
+# Sync project-specific memories — discovered dynamically, so it works for any
+# user and any set of projects (no hardcoded usernames or project names).
+for proj_mem in "$CLAUDE_DIR"/projects/*/memory; do
+  [ -d "$proj_mem" ] || continue
+  enc="$(basename "$(dirname "$proj_mem")")"
+  [ "$enc" = "$HOME_ENC" ] && continue          # home/global memory already synced above
+  name="${enc##*-Documents-}"                    # decode to a clean project name
+  sync_dir "$proj_mem" "$VAULT/claude-code/memory/$name" "Memory/$name"
+done
 
 # Push vault if there are changes
 cd "$VAULT" || { log "Cannot cd to vault"; exit 0; }
