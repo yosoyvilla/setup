@@ -1,0 +1,22 @@
+# Secrets / credentials — never commit (this repo is config + docs only)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.tfvars
+*.tfstate
+*.tfstate.*
+*credentials*
+id_rsa*
+id_ed25519*
+*.kubeconfig
+auth.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

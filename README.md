@@ -89,10 +89,12 @@ When you set up a new machine:
 - `agents/*.md` → copy to `~/.claude/agents/` (Claude Code)
 - `skills/*.md` → copy to `~/.claude/skills/<name>/SKILL.md` (Claude Code)
 - `hooks/*` → copy to `~/.claude/hooks/` (Claude Code; see Section 5.7)
-- `oh-my-openagent.json` content → `~/.config/opencode/oh-my-openagent.json` (opencode; see Section 6.3)
+- `oh-my-openagent.json` → `~/.config/opencode/oh-my-openagent.json` (opencode; vendored file, see Section 6.3)
 - `opencode-agents/*.md` → `~/.config/opencode/agents/`, `opencode-commands/*.md` → `~/.config/opencode/commands/` (opencode; see Section 6.6)
+- `opencode-scripts/check-harness.mjs` → `~/.config/opencode/scripts/` (opencode harness checker; see Section 6.7)
 - `AGENTS.md` → byte-identical to **both** `~/.config/opencode/AGENTS.md` and `~/.config/zed/AGENTS.md` (see Section 6.6)
-- `zed-skills/*` → copy to `~/.agents/skills/` (Zed; see Section 7.3)
+- `rules/*.md` → `~/.claude/rules/` (Claude Code shared rules: terraform, kubernetes, security-baseline, go)
+- `zed-skills/*` → copy to `~/.agents/skills/` (Zed/opencode shared skills, incl. `webapp-testing/scripts/with_server.py`; see Section 7.3)
 
 ---
 
@@ -1751,6 +1753,11 @@ File: `~/.config/opencode/opencode.jsonc`
       "type": "local",
       "command": ["engram", "mcp", "--tools=agent"],
       "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "@playwright/mcp@0.0.76", "--headless"],
+      "enabled": true
     }
   },
   "plugin": [
@@ -1767,7 +1774,9 @@ File: `~/.config/opencode/opencode.jsonc`
       "models": {
         "qwen3.6": {
           "name": "NaN — qwen3.6",
-          "limit": { "context": 262144, "output": 32768 }
+          "limit": { "context": 262144, "output": 32768 },
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
         },
         "deepseek-v4-flash": {
           "name": "NaN — deepseek-v4-flash",
@@ -1775,11 +1784,15 @@ File: `~/.config/opencode/opencode.jsonc`
         },
         "mimo-v2.5": {
           "name": "NaN — mimo-v2.5",
-          "limit": { "context": 1000000, "output": 32768 }
+          "limit": { "context": 1000000, "output": 32768 },
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
         },
         "gemma4": {
           "name": "NaN — gemma4",
-          "limit": { "context": 262144, "output": 32768 }
+          "limit": { "context": 262144, "output": 32768 },
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
         }
       }
     }
@@ -1805,158 +1818,10 @@ File: `~/.config/opencode/oh-my-openagent.json`
 
 > **`hephaestus` is disabled** via `disabled_agents: ["hephaestus"]` — it is not part of this configuration.
 
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+The full config is vendored in this repo as [`oh-my-openagent.json`](oh-my-openagent.json) — copy it to `~/.config/opencode/oh-my-openagent.json`. Key tuning applied (NaN model-card recipes):
 
-  "disabled_agents": ["hephaestus"],
-
-  "agents": {
-    "sisyphus": {
-      "model": "nan/deepseek-v4-flash",
-      "fallback_models": [
-        { "model": "nan/mimo-v2.5" },
-        { "model": "nan/qwen3.6" }
-      ]
-    },
-    "prometheus": {
-      "model": "nan/deepseek-v4-flash",
-      "fallback_models": [
-        { "model": "nan/mimo-v2.5" },
-        { "model": "nan/qwen3.6" }
-      ]
-    },
-    "metis": {
-      "model": "nan/deepseek-v4-flash",
-      "temperature": 0.5,
-      "fallback_models": [
-        { "model": "nan/mimo-v2.5" },
-        { "model": "nan/qwen3.6" }
-      ]
-    },
-    "oracle": {
-      "model": "nan/mimo-v2.5",
-      "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
-      ]
-    },
-    "momus": {
-      "model": "nan/mimo-v2.5",
-      "temperature": 0.1,
-      "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
-      ]
-    },
-    "multimodal-looker": {
-      "model": "nan/mimo-v2.5",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "atlas": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "explore": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "librarian": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "sisyphus-junior": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
-      ]
-    }
-  },
-
-  "categories": {
-    "quick": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "unspecified-low": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "unspecified-high": {
-      "model": "nan/deepseek-v4-flash",
-      "fallback_models": [
-        { "model": "nan/mimo-v2.5" }
-      ]
-    },
-    "writing": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    },
-    "visual-engineering": {
-      "model": "nan/mimo-v2.5",
-      "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
-      ]
-    },
-    "ultrabrain": {
-      "model": "nan/mimo-v2.5",
-      "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
-      ]
-    },
-    "deep": {
-      "model": "nan/deepseek-v4-flash",
-      "fallback_models": [
-        { "model": "nan/mimo-v2.5" }
-      ]
-    },
-    "artistry": {
-      "model": "nan/qwen3.6",
-      "fallback_models": [
-        { "model": "nan/gemma4" }
-      ]
-    }
-  },
-
-  "hashline_edit": true,
-
-  "runtime_fallback": {
-    "enabled": true,
-    "retry_on_errors": [429, 500, 502, 503, 504],
-    "max_fallback_attempts": 3,
-    "cooldown_seconds": 15,
-    "timeout_seconds": 10,
-    "notify_on_fallback": true
-  },
-
-  "experimental": {
-    "aggressive_truncation": true,
-    "task_system": true,
-    "dynamic_context_pruning": {
-      "enabled": true,
-      "notification": "minimal",
-      "turn_protection": { "enabled": true, "turns": 3 },
-      "strategies": {
-        "deduplication": { "enabled": true },
-        "supersede_writes": { "enabled": true, "aggressive": false },
-        "purge_errors": { "enabled": true, "turns": 5 }
-      }
-    }
-  }
-}
-```
+- **Sampling:** qwen3.6 agents/categories at `temperature: 0.7` (Qwen3 non-thinking recipe — avoids the low-temp repetition the model card warns about); gemma4 fallbacks at `temperature: 1.0` (Gemma 3 default); deepseek/mimo left at defaults.
+- **Reasoning:** `reasoningEffort` on the deepseek agents — `prometheus: high`, `sisyphus: medium`, `metis: medium`, and category `deep: high`. NaN honors `reasoning_effort: low|medium|high` on deepseek-v4-flash.
 
 #### oh-my-openagent Agent Reference
 
@@ -2056,7 +1921,27 @@ cp opencode-commands/*.md ~/.config/opencode/commands/
 |---|---|
 | `/council` | Convenes the adversarial council — fans the critic across multiple lenses plus the fact-checker, then synthesizes a verdict with recorded dissents. |
 | `/verify` | Runs the project's real test/lint/build commands, then routes the diff and results through the critic for a binding SHIP / REVISE / BLOCK verdict. |
-| `/smoke` | Harness self-test — confirms the agent is responding on a NaN model and scans the recent opencode log for errors. Run after any config or plugin change. |
+| `/smoke` | Harness self-test (3 stages): **Stage 1** runs the static harness checker (`check-harness.mjs`, Section 6.7), **Stage 2** confirms liveness on a NaN model, **Stage 3** scans the recent opencode log for errors. The verdict names the failing stage. Run after any config or plugin change. |
+
+---
+
+### 6.7 Harness Checker, Browser/E2E, and Vision
+
+**Harness checker (`opencode-scripts/check-harness.mjs`)** — a static, offline validator (no model calls, NaN-safe) that enforces the harness invariants: NaN-only model refs, `AGENTS.md` byte-parity (opencode == Zed), the bash denylist, Engram wiring, model context windows, and custom agent/command frontmatter. Install and run:
+```bash
+mkdir -p ~/.config/opencode/scripts
+cp opencode-scripts/check-harness.mjs ~/.config/opencode/scripts/
+node ~/.config/opencode/scripts/check-harness.mjs         # human output, exit 0/1
+node ~/.config/opencode/scripts/check-harness.mjs --json   # machine-readable
+```
+It is wired in as **Stage 1 of `/smoke`**, so a `/smoke` run validates config invariants before checking liveness.
+
+**Browser / E2E (Playwright MCP)** — `opencode.jsonc` registers the official Playwright MCP (`mcp.playwright`, Section 6.2), giving the agent `browser_navigate / click / snapshot / screenshot` tools. It launches `npx @playwright/mcp@0.0.76 --headless` (auto-installed on first use) and reuses an installed Chromium. For authoring/running Playwright E2E scripts, the `webapp-testing` skill — with its `scripts/with_server.py` server-lifecycle helper (vendored under `zed-skills/webapp-testing/scripts/`) — runs via bash; that path needs the Python `playwright` package and Chromium:
+```bash
+pip install playwright && python -m playwright install chromium
+```
+
+**Vision routing (important):** browser screenshots are images, and only the vision-capable NaN models can read them. `opencode.jsonc` declares `attachment: true` + image `modalities` on `qwen3.6`, `mimo-v2.5`, and `gemma4` (Section 6.2); `deepseek-v4-flash` is text-only. Route any screenshot/visual verification to a vision model (e.g. `opencode run -m nan/mimo-v2.5 …`) — deepseek will fabricate image descriptions. `AGENTS.md` carries this as an anti-hallucination rule, and `browser_snapshot` (accessibility text) works on any model for DOM interaction.
 
 ---
 
@@ -2102,8 +1987,7 @@ File: `~/.config/zed/settings.json`
     },
     "default_model": {
       "provider": "nan",
-      "model": "qwen3.6",
-      "enable_thinking": false
+      "model": "deepseek-v4-flash"
     },
     "commit_message_model": {
       "provider": "nan",
@@ -2125,7 +2009,8 @@ File: `~/.config/zed/settings.json`
     "model_parameters": [
       { "provider": "nan", "model": "deepseek-v4-flash", "temperature": 0.2 },
       { "provider": "nan", "model": "mimo-v2.5", "temperature": 0.2 },
-      { "provider": "nan", "model": "qwen3.6", "temperature": 0.2 }
+      { "provider": "nan", "model": "qwen3.6", "temperature": 0.7 },
+      { "provider": "nan", "model": "gemma4", "temperature": 1.0 }
     ]
   },
   "language_models": {
@@ -2139,7 +2024,7 @@ File: `~/.config/zed/settings.json`
             "max_tokens": 262144,
             "capabilities": {
               "tools": true,
-              "images": false,
+              "images": true,
               "parallel_tool_calls": false,
               "prompt_cache_key": false,
               "chat_completions": true
@@ -2175,7 +2060,7 @@ File: `~/.config/zed/settings.json`
             "max_tokens": 262144,
             "capabilities": {
               "tools": true,
-              "images": false,
+              "images": true,
               "parallel_tool_calls": false,
               "prompt_cache_key": false,
               "chat_completions": true

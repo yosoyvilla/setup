@@ -37,6 +37,11 @@ files override these where they conflict.
   plan, a fact-checker to verify claims against primary sources, and a
   multi-lens council for high-stakes decisions. (opencode: `@critic`,
   `@fact-checker`, `/council`. Zed: the matching skills.)
+- Vision needs a vision model. For browser screenshots or any image/visual
+  verification, use a vision-capable model (`nan/mimo-v2.5`, `nan/gemma4`, or
+  `nan/qwen3.6`); `nan/deepseek-v4-flash` is text-only and will fabricate image
+  descriptions. Use `browser_snapshot` (accessibility text) for DOM interaction
+  on any model.
 
 ## Memory (Engram)
 

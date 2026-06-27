@@ -25,6 +25,7 @@ sync_dir "$MEMORY_SRC"              "$VAULT/claude-code/memory"  "Memory"
 sync_dir "$CLAUDE_DIR/agents"       "$VAULT/claude-code/agents"  "Agents"
 sync_dir "$CLAUDE_DIR/skills"       "$VAULT/claude-code/skills"  "Skills"
 sync_dir "$CLAUDE_DIR/rules"        "$VAULT/claude-code/rules"   "Rules"
+sync_dir "$CLAUDE_DIR/hooks"        "$VAULT/claude-code/hooks"   "Hooks"
 
 # Sync settings.json (hooks, plugins, env vars, model)
 cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \

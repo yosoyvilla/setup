@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 HOME = os.path.expanduser("~")
@@ -187,10 +188,18 @@ def sync():
                 manifest[path] = {"hash": h, "obs_id": oid, "project": proj, "title": title}
                 new += 1
         elif ent.get("hash") != h:
-            oid = engram_save(title, body, proj)  # save new BEFORE deleting old
+            old_id = str(ent.get("obs_id") or "")
+            oid = engram_save(title, body, proj)  # save NEW first (never lose data if this fails)
             if oid:
-                engram_delete(ent.get("obs_id"))
+                # Persist the manifest -> NEW obs id BEFORE deleting the old one, and
+                # fsync it, so a crash or a concurrent run can never leave the manifest
+                # pointing at an obs we're about to delete (that's how a memory got
+                # tombstoned with no live copy, 2026-06-19). Only delete the previous
+                # obs if it's genuinely a different observation than the one just saved.
                 manifest[path] = {"hash": h, "obs_id": oid, "project": proj, "title": title}
+                save_manifest(manifest)
+                if old_id and old_id != str(oid):
+                    engram_delete(old_id)
                 changed += 1
         else:
             noop += 1
@@ -200,7 +209,29 @@ def sync():
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "sync"
-    if mode == "backfill":
-        backfill()
-    else:
-        sync()
+    # Serialize ALL runs (hook-triggered via the .sh AND direct manual runs) with an
+    # atomic mkdir lock. Previously the lock lived only in engram-sync.sh, so a direct
+    # `engram-sync.py` run could race a hook-triggered run and corrupt the save/delete
+    # sequence (caused a memory to be tombstoned with no live copy, 2026-06-19).
+    LOCK = "/tmp/engram-sync.lock"
+    if os.path.isdir(LOCK):
+        try:
+            if (time.time() - os.path.getmtime(LOCK)) > 3600:
+                os.rmdir(LOCK)  # clear a stale lock from a hard-killed run
+        except OSError:
+            pass
+    try:
+        os.mkdir(LOCK)
+    except FileExistsError:
+        print("engram-sync: another sync holds the lock; skipping")
+        sys.exit(0)
+    try:
+        if mode == "backfill":
+            backfill()
+        else:
+            sync()
+    finally:
+        try:
+            os.rmdir(LOCK)
+        except OSError:
+            pass
