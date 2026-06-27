@@ -89,10 +89,10 @@ For tasks spanning multiple sessions (large migrations, multi-PR features), crea
 
 ### Multi-Project Structure
 Projects live in `~/Documents/` with per-project `.claude/CLAUDE.md` files:
-- `project-b/` - Real estate portals (Portal-1, Portal-2, Portal-3, Portal-4)
+- `project-b/` - Real estate portals (portal-1, portal-2, portal-3, portal-4)
 - `project-c/` - E-commerce (Shopify, warehousing, infra)
-- `project-d/` - FinTech/payments (Project-d)
-- `Project-a/` - EdTech (EKS, Terraform, large infra)
+- `project-d/` - FinTech/payments
+- `project-a/` - EdTech (EKS, Terraform, large infra)
 - `Personal/` - Side projects (Crewgent, etc.)
 
 Shared rules: `~/.claude/rules/` (terraform, kubernetes, security-baseline).

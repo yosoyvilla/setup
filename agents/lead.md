@@ -49,8 +49,8 @@ Steps with no dependency between them can run in parallel.
 - **cicd** (sonnet): GitHub Actions, Bitbucket Pipelines, GitLab CI, image builds, deployment triggers
 - **database** (sonnet): PostgreSQL, MySQL, Supabase DB, migrations, performance, replication
 - **code-quality** (haiku): Python/Django, TS/Node/Next/Vite, Bash, SOLID/KISS/DRY, testing (advisory, read-only)
-- **shopify** (sonnet): Shopify Functions, Admin/Storefront API, theme development, app extensions, Shopify CLI (Project-c only)
-- **airbyte** (sonnet): Airbyte ELT connector config, sync job debugging, namespace mapping, Airbyte API (Project-c only)
+- **shopify** (sonnet): Shopify Functions, Admin/Storefront API, theme development, app extensions, Shopify CLI (project-c only)
+- **airbyte** (sonnet): Airbyte ELT connector config, sync job debugging, namespace mapping, Airbyte API (project-c only)
 - **gcp** (sonnet): GKE cluster management, GCP IAM, Workload Identity, Cloud SQL, Artifact Registry, Secret Manager, Terragrunt (project-b only)
 - **aws-incident** (sonnet): Active AWS security incidents, WAF triage, DDoS mitigation, GuardDuty findings, CloudTrail forensics
 - **cost** (haiku): AWS Cost Explorer, Kubecost, Spot/RI savings analysis, rightsizing recommendations (advisory, read-only)

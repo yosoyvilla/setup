@@ -1,6 +1,6 @@
 ---
 name: release
-description: Use when creating a project release across any project — generates changelog, bumps version, tags, and publishes a GitHub or Bitbucket release. Covers Node/pnpm (Project-c), Go (Project-a), PHP/Python (project-b), and Terraform modules.
+description: Use when creating a project release across any project — generates changelog, bumps version, tags, and publishes a GitHub or Bitbucket release. Covers Node/pnpm (project-c), Go (project-a), PHP/Python (project-b), and Terraform modules.
 user-invocable: true
 ---
 
@@ -27,16 +27,16 @@ Skip: merge commits, automated commits, trivial dependency bumps.
 
 ## Step 3 — Update Version File
 
-**Project-c (pnpm monorepo, TypeScript):**
+**project-c (pnpm monorepo, TypeScript):**
 Update `package.json` version field. If changesets are configured: use `pnpm changeset version` instead of editing manually.
 
-**Project-a (Go services):**
+**project-a (Go services):**
 `go.mod` does not change between releases — the git tag is the version. Check for a `version.go` file with a `Version` var; if build uses `-ldflags "-X main.Version=vX.Y.Z"`, no file to update. Tag is the source of truth.
 
 **project-b (PHP/Python):**
 Check `setup.py`, `pyproject.toml`, or project-specific version constant. Bitbucket repos may not have a version file — tag only.
 
-**Project-a tf-aws (Terraform modules):**
+**project-a tf-aws (Terraform modules):**
 No version file. Tag format: `<module-name>/vX.Y.Z` (e.g., `terraform-aws-eks-cluster/v1.2.0`).
 
 ## Step 4 — Commit + Tag
@@ -50,7 +50,7 @@ git push origin vX.Y.Z
 
 ## Step 5 — Create Release
 
-**GitHub (Project-a, Project-c, Personal — yosoyvilla or crewgent account):**
+**GitHub (project-a, project-c, Personal — yosoyvilla or crewgent account):**
 ```bash
 gh release create vX.Y.Z \
   --title "vX.Y.Z" \

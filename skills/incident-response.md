@@ -1,6 +1,6 @@
 ---
 name: incident-response
-description: Use when investigating production outages, degraded performance, or unexpected behavior. Covers Project-a (EKS + New Relic), Project-c (EKS + ArgoCD + Loki), project-b (GKE + Traefik), and Project-d (Dokploy).
+description: Use when investigating production outages, degraded performance, or unexpected behavior. Covers project-a (EKS + New Relic), project-c (EKS + ArgoCD + Loki), project-b (GKE + Traefik), and project-d (Dokploy).
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -16,7 +16,7 @@ Investigate incident: $ARGUMENTS
 
 ## 2. Gather Evidence
 
-### Project-a (EKS + New Relic + Traefik)
+### project-a (EKS + New Relic + Traefik)
 ```bash
 awsume vt-tooling
 kubectl config use-context <vtpr|vtst>-eks
@@ -32,7 +32,7 @@ SELECT average(duration) FROM Transaction WHERE appName='<svc>' SINCE 1 hour ago
 SELECT * FROM Log WHERE service='<svc>' AND level='ERROR' SINCE 30 minutes ago
 ```
 
-### Project-c (EKS + ArgoCD + Loki/Grafana)
+### project-c (EKS + ArgoCD + Loki/Grafana)
 ```bash
 # ArgoCD — check sync/health before touching pods
 argocd app list | grep -Ev "Synced|Healthy"
@@ -57,7 +57,7 @@ kubectl get externalsecret -A                 # ExternalSecrets → GCP Secret M
 kubectl describe externalsecret <name> -n <namespace>  # if secrets not syncing, pods won't start
 ```
 
-### Project-d (Dokploy on EC2)
+### project-d (Dokploy on EC2)
 ```bash
 ssh project-d_3p_services
 docker ps                          # running containers
@@ -81,8 +81,8 @@ gh pr list --state merged --limit 5   # recent merged PRs across any GitHub repo
 ## 4. Mitigate (fastest first)
 1. **Rollback deploy**
    - K8s: `kubectl rollout undo deployment/<name>`
-   - ArgoCD (Project-c): `argocd app rollback <app>`
-   - Dokploy (Project-d): redeploy previous image via Dokploy UI
+   - ArgoCD (project-c): `argocd app rollback <app>`
+   - Dokploy: redeploy previous image via Dokploy UI
 2. **Scale up** — `kubectl scale deployment/<name> --replicas=<n>`
 3. **Failover** — switch traffic to healthy region/cluster
 4. **Hotfix** — only if rollback would reintroduce a worse problem

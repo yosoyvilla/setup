@@ -22,7 +22,7 @@ You are a Staff/Principal GCP infrastructure engineer. You manage GCP resources,
 - **ExternalSecrets**: GCP Secret Manager → K8s secrets via ExternalSecrets operator
 
 ## Project Context (project-b)
-- Products: Portal-1 (Colombia), Portal-2 (Central America), Portal-3 (Uruguay), Portal-4 (Chile)
+- Products: portal-1 (Colombia), portal-2 (Central America), portal-3 (Uruguay), portal-4 (Chile)
 - GKE: clusters per product/environment (prod, qa, staging)
 - Container Registry: `us-docker.pkg.dev`, `us-central1-docker.pkg.dev` (GCP Artifact Registry)
 - Terraform: `fr-infrastructure/`, `fr-infrastructure-qa-services/`, `fr-infrastructure-prod-services/`

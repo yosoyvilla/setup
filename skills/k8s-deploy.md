@@ -1,6 +1,6 @@
 ---
 name: k8s-deploy
-description: Use when deploying, updating, or rolling back Kubernetes services. Covers Project-c (EKS + ArgoCD), Project-a (EKS + Helm + Traefik), and project-b (GKE + Helm + Traefik).
+description: Use when deploying, updating, or rolling back Kubernetes services. Covers project-c (EKS + ArgoCD), project-a (EKS + Helm + Traefik), and project-b (GKE + Helm + Traefik).
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -9,13 +9,13 @@ Deploy or update: $ARGUMENTS
 
 ## 0. Get Cluster Context (required first step)
 
-**Project-c (EKS, ArgoCD):**
+**project-c (EKS, ArgoCD):**
 ```bash
 # Check project CLAUDE.md for AWS profile
 kubectl config use-context <project-c-eks-context>
 ```
 
-**Project-a (EKS, Traefik):**
+**project-a (EKS, Traefik):**
 ```bash
 awsume vt-tooling
 kubectl config use-context <vtpr|vtst>-eks
@@ -56,14 +56,14 @@ helm template <release> <chart> -f values-<env>.yaml
 
 ## 3. Deploy
 
-**Project-c — ArgoCD (GitHub App: project-cbot):**
+**project-c — ArgoCD (GitHub App: project-cbot):**
 ```bash
 # Push Helm chart / values change to GitOps repo, then:
 argocd app sync <app>
 argocd app wait <app> --health
 ```
 
-**Project-a + project-b — Helm direct:**
+**project-a + project-b — Helm direct:**
 ```bash
 helm upgrade --install <release> <chart> -f values-<env>.yaml -n <namespace>
 kubectl rollout status deployment/<name> -n <namespace>
@@ -78,7 +78,7 @@ kubectl logs -l app=<service> -n <namespace> --tail=50
 kubectl get endpoints <service> -n <namespace>
 ```
 
-**Traefik IngressRoute (project-b, Project-a):**
+**Traefik IngressRoute (project-b, project-a):**
 ```bash
 kubectl get ingressroute -n <namespace>
 kubectl describe ingressroute <name> -n <namespace>
@@ -95,12 +95,12 @@ Run smoke test if the service exposes one. Check application logs for startup er
 
 ## 5. Rollback
 
-**Project-c (ArgoCD):**
+**project-c (ArgoCD):**
 ```bash
 argocd app rollback <app>  # rolls back to previous synced revision
 ```
 
-**Project-a + project-b (Helm):**
+**project-a + project-b (Helm):**
 ```bash
 helm history <release> -n <namespace>            # find target revision
 helm rollback <release> <revision> -n <namespace>

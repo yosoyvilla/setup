@@ -1,7 +1,7 @@
 # Go Conventions
 
 > Obsidian: ~/Documents/obsidian-vault/claude-code/go.md
-> Applies to: Project-a Go services (Go 1.17+)
+> Applies to: project-a Go services (Go 1.17+)
 
 ## Code Style
 - `gofmt` / `go fmt` always applied — non-negotiable
@@ -23,11 +23,11 @@
 - Use `testify/assert` or stdlib `testing` — no heavy mocking frameworks
 
 ## Linting
-- `golangci-lint run ./...` — enforced in Project-a CI (GitHub Actions)
+- `golangci-lint run ./...` — enforced in project-a CI (GitHub Actions)
 - Fix lint before pushing — CI will fail
 - Key enabled linters: `errcheck`, `govet`, `staticcheck`, `revive`, `gocyclo`
 
-## Versioning (Project-a services)
+## Versioning (project-a services)
 - `go.mod` version does NOT change between application releases — git tag is the version
 - Build version injected via ldflags: `-ldflags "-X main.Version=vX.Y.Z"`
 - Check `version.go` if present before assuming ldflags pattern

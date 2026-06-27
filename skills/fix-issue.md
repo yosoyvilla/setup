@@ -36,13 +36,13 @@ Minimal fix that addresses the issue. No unrelated cleanup.
 
 ## 6. Test
 
-**Project-c (pnpm monorepo):** `pnpm test` or `pnpm -F <package> test`
+**project-c (pnpm monorepo):** `pnpm test` or `pnpm -F <package> test`
 
-**Project-a (Go):** `go test ./...` in affected package(s)
+**project-a (Go):** `go test ./...` in affected package(s)
 
 **project-b (PHP):** check project Makefile or CI script for test command
 
-**project-b (Python/Portal-1):** `pytest`
+**project-b (Python/portal-1):** `pytest`
 
 **Personal/Crewgent:** `pytest` (backend) / `pnpm test` (frontend)
 
@@ -55,11 +55,11 @@ git diff --stat   # only relevant files changed — no unrelated noise
 
 Lint + type check per project:
 
-**Project-c:** `pnpm lint && pnpm typecheck`
+**project-c:** `pnpm lint && pnpm typecheck`
 
-**Project-a (Go):** `golangci-lint run ./...`
+**project-a (Go):** `golangci-lint run ./...`
 
-**project-b (Python/Portal-1):** `ruff check .` or `flake8`
+**project-b (Python/portal-1):** `ruff check .` or `flake8`
 
 **project-b (PHP):** check CI config for lint command (phpstan, phpcs)
 

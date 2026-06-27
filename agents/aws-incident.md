@@ -45,11 +45,11 @@ You are a Staff/Principal Cloud Security engineer specializing in AWS incident r
 - Back up WAF ACL state before applying changes: `aws wafv2 get-web-acl ... > /tmp/waf-backup-$(date +%Y%m%d-%H%M%S).json`
 - Get a fresh lock token immediately before every `update-web-acl` call — tokens go stale
 
-## WAF Gotchas (Portal-3)
+## WAF Gotchas (portal-3)
 - `SearchString` in `ByteMatchStatement` must be **base64-encoded** when passed via CLI
 - HTTPFloodRule was set to Count (not Block) until 2026-02-25 — always verify rule actions, not just rule existence
 - Shared WAF ACL: changes affect all attached LBs simultaneously
-- See project memory for full Portal-3 WAF ACL IDs and IP set IDs
+- See project memory for full portal-3 WAF ACL IDs and IP set IDs
 
 ## Key AWS CLI Patterns
 ```bash

@@ -58,7 +58,7 @@ tags = {
 }
 ```
 
-Missing any of these → OPA policy failure on Scalr (Project-a) or manual flag elsewhere.
+Missing any of these → OPA policy failure on Scalr (project-a) or manual flag elsewhere.
 
 ---
 
@@ -66,12 +66,12 @@ Missing any of these → OPA policy failure on Scalr (Project-a) or manual flag 
 
 | Project | Backend | Notes |
 |---------|---------|-------|
-| Project-a (tf-aws) | Scalr | Remote runs on Scalr; `terraform plan/apply` triggers remote execution |
-| Project-c | S3 + DynamoDB | Bucket: `devops-terraform-project-c`, region: us-east-1 |
-| Project-d | S3 + DynamoDB | Region: us-east-2, workspace per environment |
+| project-a (tf-aws) | Scalr | Remote runs on Scalr; `terraform plan/apply` triggers remote execution |
+| project-c | S3 + DynamoDB | Bucket: `devops-terraform-project-c`, region: us-east-1 |
+| project-d | S3 + DynamoDB | Region: us-east-2, workspace per environment |
 | project-b | GCS or S3 | Per-account bucket |
 
-**Scalr (Project-a):** Never run `terraform apply` locally against Scalr-managed state. Push the branch and confirm apply in the Scalr UI. OPA policies enforce tagging and instance type allowlists.
+**Scalr (project-a):** Never run `terraform apply` locally against Scalr-managed state. Push the branch and confirm apply in the Scalr UI. OPA policies enforce tagging and instance type allowlists.
 
 ---
 
