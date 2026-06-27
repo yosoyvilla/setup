@@ -25,6 +25,9 @@ warn(){ printf "  ${c_yellow}!${c_off} %s\n" "$1"; }
 err(){ printf "  ${c_red}✗${c_off} %s\n" "$1"; FAILED+=("$1"); }
 have(){ command -v "$1" >/dev/null 2>&1; }
 todo(){ TODO+=("$1"); }
+# Run a command with root privileges: direct if already root (e.g. containers),
+# via sudo otherwise. Avoids requiring sudo when none is installed.
+as_root(){ if [ "$(id -u)" -eq 0 ]; then "$@"; elif command -v sudo >/dev/null 2>&1; then sudo "$@"; else warn "root needed for: $*"; return 1; fi; }
 
 # ── OS detection ──────────────────────────────────────────────────
 OS=""
@@ -62,19 +65,19 @@ if [ "$OS" = "macos" ]; then
     brew list "$pkg" >/dev/null 2>&1 && ok "$pkg" || { brew install "$pkg" >/dev/null 2>&1 && ok "installed $pkg" || warn "skip $pkg"; }
   done
 else
-  sudo apt-get update -y >/dev/null 2>&1 && ok "apt updated"
-  sudo apt-get install -y curl wget git build-essential unzip ripgrep fzf jq zsh >/dev/null 2>&1 && ok "base packages" || err "apt base packages"
+  as_root apt-get update -y >/dev/null 2>&1 && ok "apt updated"
+  as_root apt-get install -y curl wget git build-essential unzip ripgrep fzf jq zsh >/dev/null 2>&1 && ok "base packages" || err "apt base packages"
   # gh
   if ! have gh; then
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg >/dev/null 2>&1
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
-    sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y gh >/dev/null 2>&1 && ok "gh" || warn "gh install"
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | as_root dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg >/dev/null 2>&1
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | as_root tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+    as_root apt-get update -y >/dev/null 2>&1 && as_root apt-get install -y gh >/dev/null 2>&1 && ok "gh" || warn "gh install"
   else ok "gh"; fi
   # terraform
   if ! have terraform; then
-    wget -qO- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg 2>/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list >/dev/null
-    sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y terraform >/dev/null 2>&1 && ok "terraform" || warn "terraform install"
+    wget -qO- https://apt.releases.hashicorp.com/gpg | as_root gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg 2>/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | as_root tee /etc/apt/sources.list.d/hashicorp.list >/dev/null
+    as_root apt-get update -y >/dev/null 2>&1 && as_root apt-get install -y terraform >/dev/null 2>&1 && ok "terraform" || warn "terraform install"
   else ok "terraform"; fi
 fi
 
@@ -112,15 +115,15 @@ section "Cloud and infra CLIs"
 # AWS CLI v2
 if ! have aws; then
   if [ "$OS" = "macos" ]; then
-    curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o /tmp/AWSCLIV2.pkg && sudo installer -pkg /tmp/AWSCLIV2.pkg -target / >/dev/null 2>&1 && ok "aws cli" || warn "aws cli"
+    curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o /tmp/AWSCLIV2.pkg && as_root installer -pkg /tmp/AWSCLIV2.pkg -target / >/dev/null 2>&1 && ok "aws cli" || warn "aws cli"
   else
-    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o /tmp/awscliv2.zip && unzip -oq /tmp/awscliv2.zip -d /tmp && sudo /tmp/aws/install --update >/dev/null 2>&1 && ok "aws cli" || warn "aws cli"
+    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o /tmp/awscliv2.zip && unzip -oq /tmp/awscliv2.zip -d /tmp && as_root /tmp/aws/install --update >/dev/null 2>&1 && ok "aws cli" || warn "aws cli"
   fi
 else ok "aws cli"; fi
 # kubectl (mac via brew above; linux direct)
 if ! have kubectl && [ "$OS" = "debian" ]; then
   curl -fsSLO "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
-    && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && rm -f kubectl && ok "kubectl" || warn "kubectl"
+    && as_root install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && rm -f kubectl && ok "kubectl" || warn "kubectl"
 fi
 have kubectl && ok "kubectl present" || warn "kubectl missing"
 # helm (linux)
