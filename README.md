@@ -832,7 +832,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -927,7 +927,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -956,7 +956,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -966,7 +966,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -976,7 +976,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -987,7 +987,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -998,7 +998,7 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/davidvilla/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
       }
@@ -1029,7 +1029,7 @@ File: `~/.claude/settings.json`
 }
 ```
 
-> **orca hooks:** The `/Users/davidvilla/.orca/agent-hooks/claude-hook.sh` entries that appear across the Stop, PreToolUse, PostToolUse, UserPromptSubmit, StopFailure, PostToolUseFailure, and PermissionRequest events belong to orca, an external/optional tool installed separately (not part of this repo) — each invocation is guarded by an `[ -x ... ]` check, so if orca is not installed the hook is a no-op.
+> **orca hooks:** The `/Users/user/.orca/agent-hooks/claude-hook.sh` entries that appear across the Stop, PreToolUse, PostToolUse, UserPromptSubmit, StopFailure, PostToolUseFailure, and PermissionRequest events belong to orca, an external/optional tool installed separately (not part of this repo) — each invocation is guarded by an `[ -x ... ]` check, so if orca is not installed the hook is a no-op.
 
 > **`opus[1m]` model:** Claude Code model selector — Opus with the 1M-token context window. The `[1m]` suffix requests the long-context variant.
 
@@ -1604,7 +1604,7 @@ File: `~/.claude/hooks/auto-sync.sh`
 # Triggered by Stop and PostCompact hooks (async).
 
 CLAUDE_DIR="$HOME/.claude"
-MEMORY_SRC="$CLAUDE_DIR/projects/-Users-davidvilla/memory"
+MEMORY_SRC="$CLAUDE_DIR/projects/-Users-user/memory"
 VAULT="$HOME/Documents/obsidian-vault"
 LOG="$CLAUDE_DIR/sync.log"
 
@@ -1629,10 +1629,10 @@ cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \
   && log "settings.json synced" || log "settings.json copy failed"
 
 sync_dir "$CLAUDE_DIR/agent-memory"                                               "$VAULT/claude-code/agent-memory"        "Agent Memory"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-b/memory"      "$VAULT/claude-code/memory/project-b"     "Memory/project-b"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-c/memory" "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-Project-a/memory"       "$VAULT/claude-code/memory/project-a"      "Memory/Project-a"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-d/memory"      "$VAULT/claude-code/memory/project-d"     "Memory/Project-d"
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-b/memory"      "$VAULT/claude-code/memory/project-b"     "Memory/project-b"
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-c/memory" "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-Project-a/memory"       "$VAULT/claude-code/memory/project-a"      "Memory/Project-a"
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-d/memory"      "$VAULT/claude-code/memory/project-d"     "Memory/Project-d"
 
 cd "$VAULT" || { log "Cannot cd to vault"; exit 0; }
 if git status --porcelain | grep -q .; then
@@ -1652,7 +1652,7 @@ fi
 chmod +x ~/.claude/hooks/auto-sync.sh
 ```
 
-> **Linux path note:** The memory path uses `-Users-davidvilla` which is derived from the macOS home directory `/Users/davidvilla`. On Linux, home is `/home/davidvilla`, so the path would be `-home-davidvilla`. The auto-sync script uses `$MEMORY_SRC` — update this variable to match your actual path: `$CLAUDE_DIR/projects/$(echo $HOME | tr '/' '-' | sed 's/^-//')/memory`
+> **Linux path note:** The memory path uses `-Users-user` which is derived from the macOS home directory `/Users/user`. On Linux, home is `/home/user`, so the path would be `-home-user`. The auto-sync script uses `$MEMORY_SRC` — update this variable to match your actual path: `$CLAUDE_DIR/projects/$(echo $HOME | tr '/' '-' | sed 's/^-//')/memory`
 
 #### `engram-sync.sh` + `engram-sync.py` (memory → Engram)
 

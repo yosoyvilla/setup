@@ -53,9 +53,9 @@ def iter_memory_files():
 def project_for(path: str) -> str:
     # path = .../projects/<projdir>/memory/<file>.md  ->  <projdir>
     projdir = os.path.basename(os.path.dirname(os.path.dirname(path)))
-    if projdir == "-Users-davidvilla":
+    if projdir == "-Users-user":
         return "global"
-    prefix = "-Users-davidvilla-Documents-"
+    prefix = "-Users-user-Documents-"
     name = projdir[len(prefix):] if projdir.startswith(prefix) else projdir
     return name.lower()
 

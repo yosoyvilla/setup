@@ -4,7 +4,7 @@
 # Syncs: memory, agents, skills, rules
 
 CLAUDE_DIR="$HOME/.claude"
-MEMORY_SRC="$CLAUDE_DIR/projects/-Users-davidvilla/memory"
+MEMORY_SRC="$CLAUDE_DIR/projects/-Users-user/memory"
 VAULT="$HOME/Documents/obsidian-vault"
 LOG="$CLAUDE_DIR/sync.log"
 
@@ -35,13 +35,13 @@ cp "$CLAUDE_DIR/settings.json" "$VAULT/claude-code/settings.json" 2>/dev/null \
 sync_dir "$CLAUDE_DIR/agent-memory" "$VAULT/claude-code/agent-memory" "Agent Memory"
 
 # Sync project-specific memories
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-b/memory" \
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-b/memory" \
          "$VAULT/claude-code/memory/project-b"  "Memory/project-b"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-c/memory" \
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-c/memory" \
          "$VAULT/claude-code/memory/project-c" "Memory/Project-c"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-Project-a/memory" \
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-Project-a/memory" \
          "$VAULT/claude-code/memory/project-a" "Memory/Project-a"
-sync_dir "$CLAUDE_DIR/projects/-Users-davidvilla-Documents-project-d/memory" \
+sync_dir "$CLAUDE_DIR/projects/-Users-user-Documents-project-d/memory" \
          "$VAULT/claude-code/memory/project-d" "Memory/Project-d"
 
 # Push vault if there are changes
