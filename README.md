@@ -653,9 +653,17 @@ Claude Code is Anthropic's CLI assistant. It uses a multi-agent architecture whe
 
 ### 5.1 Installation
 
+Native installer (recommended — standalone binary to `~/.local/bin`, auto-updates; macOS/Linux/WSL):
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+Alternative — Homebrew (`brew install --cask claude-code`) or npm (requires Node 18+; installs the same native binary):
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
+
+> Source: [Claude Code setup](https://code.claude.com/docs/en/setup). Ensure `~/.local/bin` is on your `PATH` (Section 4).
 
 Authenticate:
 ```bash

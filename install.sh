@@ -142,9 +142,13 @@ else ok "oh-my-zsh present"; fi
 # 6. AI tools: Claude Code, opencode, Zed, Engram
 # ════════════════════════════════════════════════════════════════════
 section "AI tools"
-# Claude Code
-have claude || { npm install -g @anthropic-ai/claude-code >/dev/null 2>&1 && ok "Claude Code" || err "Claude Code install"; }
-have claude && ok "claude $(claude --version 2>/dev/null | head -1)"
+# Claude Code — native installer (recommended, auto-updating); fall back to npm
+export PATH="$HOME/.local/bin:$PATH"
+if ! have claude; then
+  curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 && ok "Claude Code (native)" \
+    || { npm install -g @anthropic-ai/claude-code >/dev/null 2>&1 && ok "Claude Code (npm)" || err "Claude Code install"; }
+fi
+have claude && ok "claude $(claude --version 2>/dev/null | head -1)" || warn "claude not on PATH (ensure ~/.local/bin in PATH)"
 # opencode
 if ! have opencode; then
   if [ "$OS" = "macos" ]; then brew install anomalyco/tap/opencode >/dev/null 2>&1 && ok "opencode" || err "opencode";
@@ -217,6 +221,7 @@ if have node; then
 fi
 
 # ── shell env reminders ───────────────────────────────────────────
+grep -q 'HOME/.local/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 grep -q 'HOME/.bun/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshrc
 grep -q 'KREW_ROOT' ~/.zshrc 2>/dev/null || echo 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >> ~/.zshrc
 
