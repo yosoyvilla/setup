@@ -1,0 +1,231 @@
+{
+  "cleanupPeriodDays": 90,
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "model": "opus[1m]",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/auto-sync.sh",
+            "statusMessage": "Syncing memory to Obsidian...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/engram-sync.sh",
+            "statusMessage": "Syncing memory to Engram...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/auto-sync.sh",
+            "statusMessage": "Post-compact memory sync...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/engram-sync.sh",
+            "statusMessage": "Post-compact Engram sync...",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -c '{ts: (now | todate), event: \"WorktreeCreate\", path: .worktree_path, branch: .branch}' >> ~/.claude/worktree.log 2>/dev/null; exit 0",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -c '{ts: (now | todate), event: \"WorktreeRemove\", path: .worktree_path}' >> ~/.claude/worktree.log 2>/dev/null; exit 0",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Knowledge base: ~/Documents/obsidian-vault/ (sync: yosoyvilla/obsidian-vault)\" && echo \"When modifying Claude Code config (agents/skills/hooks/rules/plugins), update the vault and push.\" && if [ -f .claude/agent-context/lead.md ]; then echo \"Active lead plan:\" && head -5 .claude/agent-context/lead.md; fi"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ]; then case \"$FILE\" in *.env|*.env.*|*terraform.tfstate*|*secrets/*|*.pem|*.key) echo \"BLOCKED: Protected file $FILE\" >&2; exit 2;; esac; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // \"\"' 2>/dev/null); if echo \"$CMD\" | grep -qE '(--profile[[:space:]]+(vtpr|bipr|lppr)|awsume[[:space:]]+(vtpr|bipr|lppr)|profile=(vtpr|bipr|lppr))' && echo \"$CMD\" | grep -qiE '\\b(delete|terminate|remove|purge|destroy|disable|deregister|drop|truncate)\\b'; then jq -n '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"additionalContext\": \"PROD SAFETY: This command targets a production AWS account (vtpr/bipr/lppr) and contains a destructive operation. Confirm this is intentional before proceeding.\"}}'; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && [[ \"$FILE\" == *.tf ]]; then terraform fmt \"$FILE\" 2>/dev/null; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat | jq -c '{ts: (now | todate), cmd: .tool_input.command, cwd: .cwd}' >> ~/.claude/command-audit.log 2>/dev/null; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "ralph-loop@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "explanatory-output-style@claude-plugins-official": true,
+    "learning-output-style@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "php-lsp@claude-plugins-official": true
+  },
+  "autoDreamEnabled": true,
+  "skipWorkflowUsageWarning": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true
+}

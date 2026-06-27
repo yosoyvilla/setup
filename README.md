@@ -6,6 +6,19 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
 
 ---
 
+## Quick Start (automated)
+
+On **macOS** or **Debian/Ubuntu**, the bundled installer does the whole setup — tools, Claude Code, opencode, Zed, Engram, Playwright, and every vendored config/agent/skill/rule/hook:
+
+```bash
+git clone git@github.com:yosoyvilla/setup.git && cd setup
+./install.sh
+```
+
+`install.sh` is **idempotent** (safe to re-run) and **unattended** (never prompts, never writes secrets). It auto-detects the OS, backs up any existing configs before overwriting, templatizes machine-specific paths, validates the opencode harness at the end, and prints a **TODO list** of the handful of steps it cannot automate (API keys, `gh`/`aws`/`gcloud` auth, the Zed API-key UI step, launching opencode once to install the plugin). The sections below document every step the script performs, for manual setup, Fedora, or reference.
+
+---
+
 ## Table of Contents
 
 1. [Two AI Assistants — Architecture Overview](#1-two-ai-assistants--architecture-overview)
@@ -1703,14 +1716,9 @@ brew list opencode  # → .../Cellar/opencode/<version>/bin/opencode
 
 > **Provider note:** This build runs entirely on the NaN provider (see Section 6.2). No OpenCode Zen subscription is required — only a `NAN_API_KEY` in the environment.
 
-Install the oh-my-openagent plugin into the opencode cache:
-```bash
-npm install --prefix ~/.cache/opencode/packages/oh-my-openagent@latest \
-  --ignore-scripts \
-  oh-my-openagent
-```
+The oh-my-openagent plugin does **not** need a manual install. opencode installs npm plugins listed in the `plugin` array of `opencode.jsonc` (Section 6.2) **automatically at startup, using Bun**, caching them under `~/.cache/opencode/node_modules/` ([opencode plugins docs](https://opencode.ai/docs/plugins/)). So once `opencode.jsonc` is in place and Bun is installed (Section 3.5), the plugin is fetched on the next `opencode` launch — just start opencode once.
 
-> **Why `--ignore-scripts`:** The `@ast-grep/cli` postinstall step moves a platform binary into place and can fail. Skipping it is safe — AST grep degrades gracefully.
+> **Pin a version if desired:** use `"oh-my-openagent@4.9.2"` instead of `@latest` in the `plugin` array. If `@ast-grep/cli`'s postinstall fails during plugin resolution, it is safe to ignore — AST grep degrades gracefully.
 
 ### 6.2 Main Config (`opencode.jsonc`)
 
@@ -2114,10 +2122,13 @@ That's it. Zed auto-discovers all subfolders of `~/.agents/skills/` on next laun
 |-------|---------------------|
 | `algorithmic-art` | Generating generative/algorithmic art or creative-coding visuals |
 | `canvas-design` | Designing on an HTML canvas or working with 2D canvas graphics |
+| `computer-use` | Driving a computer/GUI via screenshots and synthetic input |
+| `find-skills` | Discovering which installed skill fits the current task |
 | `frontend-design` | Building production-grade frontend components, pages, or apps |
 | `incident-triage` | Investigating outages, errors, or security alerts |
 | `k8s-debug` | Diagnosing pod failures, ArgoCD sync issues, HPA problems |
 | `karpathy-guidelines` | Writing, reviewing, or refactoring code |
+| `orca-cli` | Working with the orca CLI / agent-hooks workflow |
 | `skill-creator` | Creating, editing, or validating new skills |
 | `spec-first` | Planning a non-trivial code or infra change |
 | `terraform-devops` | Working with `.tf` files or planning infra changes |

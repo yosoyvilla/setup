@@ -1,0 +1,81 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "nan/deepseek-v4-flash",
+  "small_model": "nan/qwen3.6",
+  "enabled_providers": ["nan"],
+  "lsp": true,
+  "compaction": {
+    "auto": true,
+    "prune": true
+  },
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm -rf /": "deny",
+      "rm -rf /*": "deny",
+      "rm -rf ~": "deny",
+      "rm -rf ~/*": "deny",
+      "git push --force*": "deny",
+      "git push -f*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -fd*": "deny",
+      "terraform destroy*": "deny",
+      "terraform force-unlock*": "deny",
+      "kubectl delete namespace*": "deny"
+    },
+    "skill": {
+      "terraform-devops": "deny",
+      "incident-triage": "deny",
+      "spec-first": "deny"
+    }
+  },
+  "mcp": {
+    "engram": {
+      "type": "local",
+      "command": ["engram", "mcp", "--tools=agent"],
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "@playwright/mcp@0.0.76", "--headless"],
+      "enabled": true
+    }
+  },
+  "plugin": [
+    "oh-my-openagent@latest"
+  ],
+  "provider": {
+    "nan": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NaN",
+      "options": {
+        "baseURL": "https://api.nan.builders/v1",
+        "apiKey": "{env:NAN_API_KEY}"
+      },
+      "models": {
+        "qwen3.6": {
+          "name": "NaN — qwen3.6",
+          "limit": { "context": 262144, "output": 32768 },
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
+        },
+        "deepseek-v4-flash": {
+          "name": "NaN — deepseek-v4-flash",
+          "limit": { "context": 1000000, "output": 32768 }
+        },
+        "mimo-v2.5": {
+          "name": "NaN — mimo-v2.5",
+          "limit": { "context": 1000000, "output": 32768 },
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
+        },
+        "gemma4": {
+          "name": "NaN — gemma4",
+          "limit": { "context": 262144, "output": 32768 },
+          "attachment": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] }
+        }
+      }
+    }
+  }
+}
