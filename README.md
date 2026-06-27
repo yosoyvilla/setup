@@ -86,7 +86,7 @@ This setup uses **two separate AI coding assistants**. They are completely indep
 |---|---|---|
 | Config location | `~/.claude/agents/*.md` | `~/.config/opencode/oh-my-openagent.json` |
 | Agent format | Markdown + YAML frontmatter | JSON model config per agent name |
-| Domain agents | 19 custom agents (infra, k8s, gcp, doc-reviewer…) | None — Sisyphus delegates by task category |
+| Domain agents | 18 custom agents (infra, k8s, gcp, doc-reviewer…) | None — Sisyphus delegates by task category |
 | Orchestrator | `lead` agent (Claude Opus) | Sisyphus (nan/deepseek-v4-flash) |
 | Plan review | `plan-critic` agent | Momus (nan/mimo-v2.5) |
 | Spec-first planning | `spec-driven-development` skill | Prometheus agent + `/start-work` |
@@ -108,6 +108,9 @@ When you set up a new machine:
 - `AGENTS.md` → byte-identical to **both** `~/.config/opencode/AGENTS.md` and `~/.config/zed/AGENTS.md` (see Section 6.6)
 - `rules/*.md` → `~/.claude/rules/` (Claude Code shared rules: terraform, kubernetes, security-baseline, go)
 - `zed-skills/*` → copy to `~/.agents/skills/` (Zed/opencode shared skills, incl. `webapp-testing/scripts/with_server.py`; see Section 7.3)
+- `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, opencode.jsonc, opencode-secondary.json, tui.json, zed-settings.json); machine-specific paths use `__HOME__`/`__ENGRAM__` tokens resolved at install time
+
+Or just run `./install.sh` (Quick Start) to do all of the above automatically.
 
 ---
 
@@ -766,10 +769,10 @@ For tasks spanning multiple sessions (large migrations, multi-PR features), crea
 
 ### Multi-Project Structure
 Projects live in `~/Documents/` with per-project `.claude/CLAUDE.md` files:
-- `project-b/` - Real estate portals (Portal-1, Portal-2, Portal-3, Portal-4)
+- `project-b/` - Real estate portals (portal-1, portal-2, portal-3, portal-4)
 - `project-c/` - E-commerce (Shopify, warehousing, infra)
-- `project-d/` - FinTech/payments (Project-d)
-- `Project-a/` - EdTech (EKS, Terraform, large infra)
+- `project-d/` - FinTech/payments
+- `project-a/` - EdTech (EKS, Terraform, large infra)
 - `Personal/` - Side projects (Crewgent, etc.)
 
 Shared rules: `~/.claude/rules/` (terraform, kubernetes, security-baseline).
@@ -1567,7 +1570,7 @@ All resources must have: Name, Environment, Team, ManagedBy=terraform
 
 ```markdown
 # Go Conventions
-# Applies to: Project-a Go services (Go 1.17+)
+# Applies to: project-a Go services (Go 1.17+)
 
 ## Code Style
 - `gofmt` always applied
@@ -2161,7 +2164,7 @@ That's it. Zed auto-discovers all subfolders of `~/.agents/skills/` on next laun
 
 **Verify installation:**
 
-Zed → `Cmd+,` → AI → Skills → User tab — all 12 skills should appear.
+Zed → `Cmd+,` → AI → Skills → User tab — all 15 skills should appear.
 
 ---
 
@@ -2182,7 +2185,7 @@ brew install gentleman-programming/tap/engram
 
 This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary installs to `/opt/homebrew/bin/engram` on Apple Silicon macOS. The same tap also ships `gentle-ai` (`brew install gentleman-programming/tap/gentle-ai`).
 
-> **Linux note:** Paths in the configs below assume the macOS Homebrew prefix `/opt/homebrew`. On Linux, install per the tap's instructions and update the `engram` paths in `~/.config/zed/settings.json` (`context_servers.engram.command`) and `~/.claude/hooks/engram-sync.py` (`ENGRAM`) to match `which engram`.
+> **Linux note:** these configs assume the macOS Homebrew prefix `/opt/homebrew`, but the engram path is resolved dynamically — `install.sh` sets the Zed `context_servers.engram.command` from `command -v engram`, and `engram-sync.py` resolves it via `shutil.which("engram")` (falling back to the Homebrew path). For a manual install on Linux, just ensure `engram` is on `PATH`.
 
 ### 8.3 What it backs
 
@@ -2271,7 +2274,7 @@ Add to `~/.zshrc`. Never commit API keys to git.
 # Get key at: https://nan.builders
 export NAN_API_KEY="sk-..."
 
-# New Relic (Project-a project observability)
+# New Relic (project-a observability)
 export NEW_RELIC_API_KEY="NRAK-..."
 
 # HashiCorp Vault
@@ -2283,7 +2286,7 @@ export SPACES_ACCESS_KEY_ID="..."
 export SPACES_SECRET_ACCESS_KEY="..."
 ```
 
-> **Set on-demand, not standing exports:** `SCALR_TOKEN` (Project-a Scalr deploys) and `AIRBYTE_TOKEN` (Project-c Airbyte) are exported only for the session that needs them — they are not kept in `~/.zshrc`.
+> **Set on-demand, not standing exports:** `SCALR_TOKEN` (project-a Scalr deploys) and `AIRBYTE_TOKEN` (project-c Airbyte) are exported only for the session that needs them — they are not kept in `~/.zshrc`.
 
 **Credential management by type:**
 
@@ -2301,13 +2304,13 @@ export SPACES_SECRET_ACCESS_KEY="..."
 
 ```
 ~/Documents/
-├── project-b/          # Real estate portals: Portal-1, Portal-2, Portal-3, Portal-4
+├── project-b/          # Real estate portals: portal-1, portal-2, portal-3, portal-4
 │                      # PHP, GCP, GKE, Terragrunt, PostgreSQL
 ├── project-c/     # E-commerce: Shopify, warehousing, infra
 │                      # Node.js, Shopify Functions, Airbyte, ArgoCD
-├── project-d/          # FinTech/payments: Project-d
+├── project-d/          # FinTech/payments
 │                      # Python/Django, Dokploy, DigitalOcean
-├── Project-a/           # EdTech
+├── project-a/           # EdTech
 │                      # Go, EKS, Terraform, New Relic, Scalr
 ├── Personal/          # Side projects (Crewgent, etc.)
 │                      # TypeScript, Next.js, Supabase
@@ -2391,7 +2394,7 @@ Copy this list and check off each item:
 - [ ] Authenticated (run `claude`)
 - [ ] `~/.claude/CLAUDE.md` created
 - [ ] `~/.claude/settings.json` created (model `opus[1m]`)
-- [ ] `~/.claude/agents/` populated (19 agent files, incl. `doc-reviewer`)
+- [ ] `~/.claude/agents/` populated (18 agent files, incl. `doc-reviewer`)
 - [ ] `~/.claude/skills/` populated
 - [ ] `~/.claude/rules/` created
 - [ ] `~/.claude/hooks/auto-sync.sh` created and executable
@@ -2424,7 +2427,7 @@ Copy this list and check off each item:
 - [ ] `~/.config/zed/settings.json` created (NaN openai_compatible, engram context server)
 - [ ] `~/.config/zed/AGENTS.md` (byte-identical to repo `AGENTS.md`)
 - [ ] NaN API key set in Zed settings UI (the `nan` provider)
-- [ ] Zed skills installed: `ls ~/.agents/skills/` → shows 12 skill folders
+- [ ] Zed skills installed: `ls ~/.agents/skills/` → shows 15 skill folders
 - [ ] Skills visible in Zed → Settings → AI → Skills → User tab
 
 **Terminal Tools**
@@ -2447,11 +2450,13 @@ Copy this list and check off each item:
 
 ### oh-my-openagent not loading
 
+opencode auto-installs `plugin`-array packages with Bun at startup, caching them under `~/.cache/opencode/node_modules/`. If the plugin is not loading:
+
 ```bash
-ls ~/.cache/opencode/packages/oh-my-openagent@latest/
-# If missing, reinstall:
-npm install --prefix ~/.cache/opencode/packages/oh-my-openagent@latest \
-  --ignore-scripts oh-my-openagent
+command -v bun                                    # Bun must be installed (Section 3.5)
+ls ~/.cache/opencode/node_modules/oh-my-openagent # is it cached?
+# Force a clean re-resolve, then relaunch opencode:
+rm -rf ~/.cache/opencode/node_modules && opencode
 ```
 
 ### Stale/unexpected plugin appearing in `opencode debug info`

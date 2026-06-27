@@ -76,7 +76,8 @@ else
   # terraform
   if ! have terraform; then
     wget -qO- https://apt.releases.hashicorp.com/gpg | as_root gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg 2>/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | as_root tee /etc/apt/sources.list.d/hashicorp.list >/dev/null
+    CODENAME="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $CODENAME main" | as_root tee /etc/apt/sources.list.d/hashicorp.list >/dev/null
     as_root apt-get update -y >/dev/null 2>&1 && as_root apt-get install -y terraform >/dev/null 2>&1 && ok "terraform" || warn "terraform install"
   else ok "terraform"; fi
 fi
@@ -191,6 +192,9 @@ cp "$REPO_DIR"/hooks/* "$HOME/.claude/hooks/" && chmod +x "$HOME/.claude/hooks/"
 # opencode
 backup "$HOME/.config/opencode/opencode.jsonc" "$REPO_DIR/config/opencode.jsonc"
 cp "$REPO_DIR/config/opencode.jsonc" "$HOME/.config/opencode/opencode.jsonc" && ok "opencode.jsonc"
+cp "$REPO_DIR/config/tui.json" "$HOME/.config/opencode/tui.json" && ok "opencode tui.json"
+mkdir -p "$HOME/.opencode"
+cp "$REPO_DIR/config/opencode-secondary.json" "$HOME/.opencode/opencode.json" && ok "opencode secondary config (.opencode/opencode.json, prevents drift)"
 cp "$REPO_DIR/oh-my-openagent.json" "$HOME/.config/opencode/oh-my-openagent.json" && ok "oh-my-openagent.json"
 cp "$REPO_DIR/AGENTS.md" "$HOME/.config/opencode/AGENTS.md" && ok "opencode AGENTS.md"
 cp "$REPO_DIR"/opencode-agents/*.md "$HOME/.config/opencode/agents/" && ok "opencode agents"
