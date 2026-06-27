@@ -20,3 +20,7 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Python build artifacts
+__pycache__/
+*.pyc
