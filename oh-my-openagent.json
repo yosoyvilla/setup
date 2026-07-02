@@ -1,23 +1,35 @@
 {
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
-
-  "disabled_agents": ["hephaestus"],
-
+  "disabled_agents": [
+    "hephaestus"
+  ],
   "agents": {
     "sisyphus": {
       "model": "nan/deepseek-v4-flash",
       "reasoningEffort": "medium",
       "fallback_models": [
-        { "model": "nan/mimo-v2.5" },
-        { "model": "nan/qwen3.6", "temperature": 0.7 }
+        {
+          "model": "nan/mimo-v2.5"
+        },
+        {
+          "model": "nan/qwen3.6",
+          "temperature": 0.6,
+          "top_p": 0.95
+        }
       ]
     },
     "prometheus": {
       "model": "nan/deepseek-v4-flash",
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "fallback_models": [
-        { "model": "nan/mimo-v2.5" },
-        { "model": "nan/qwen3.6", "temperature": 0.7 }
+        {
+          "model": "nan/mimo-v2.5"
+        },
+        {
+          "model": "nan/qwen3.6",
+          "temperature": 0.6,
+          "top_p": 0.95
+        }
       ]
     },
     "metis": {
@@ -25,138 +37,209 @@
       "temperature": 0.5,
       "reasoningEffort": "high",
       "fallback_models": [
-        { "model": "nan/mimo-v2.5" },
-        { "model": "nan/qwen3.6", "temperature": 0.7 }
+        {
+          "model": "nan/mimo-v2.5"
+        },
+        {
+          "model": "nan/qwen3.6",
+          "temperature": 0.6,
+          "top_p": 0.95
+        }
       ]
     },
     "oracle": {
       "model": "nan/mimo-v2.5",
       "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
+        {
+          "model": "nan/deepseek-v4-flash"
+        }
       ]
     },
     "momus": {
       "model": "nan/mimo-v2.5",
       "temperature": 0.1,
       "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
+        {
+          "model": "nan/deepseek-v4-flash"
+        }
       ]
     },
     "multimodal-looker": {
       "model": "nan/mimo-v2.5",
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
       ]
     },
     "atlas": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
+      "top_p": 0.95,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
       ]
     },
     "explore": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
+      "top_p": 0.95,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
       ]
     },
     "librarian": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
+      "top_p": 0.95,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
       ]
     },
     "sisyphus-junior": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 0.6,
+      "top_p": 0.95,
       "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
+        {
+          "model": "nan/deepseek-v4-flash"
+        }
       ]
     }
   },
-
   "categories": {
     "quick": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
-      ]
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
+      ],
+      "top_p": 0.95
     },
     "unspecified-low": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
-      ]
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
+      ],
+      "top_p": 0.95
     },
     "unspecified-high": {
       "model": "nan/deepseek-v4-flash",
       "fallback_models": [
-        { "model": "nan/mimo-v2.5" }
+        {
+          "model": "nan/mimo-v2.5"
+        }
       ]
     },
     "writing": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
-      ]
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
+      ],
+      "top_p": 0.95
     },
     "visual-engineering": {
       "model": "nan/mimo-v2.5",
       "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
+        {
+          "model": "nan/deepseek-v4-flash"
+        }
       ]
     },
     "ultrabrain": {
       "model": "nan/mimo-v2.5",
       "fallback_models": [
-        { "model": "nan/deepseek-v4-flash" }
+        {
+          "model": "nan/deepseek-v4-flash"
+        }
       ]
     },
     "deep": {
       "model": "nan/deepseek-v4-flash",
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "fallback_models": [
-        { "model": "nan/mimo-v2.5" }
+        {
+          "model": "nan/mimo-v2.5"
+        }
       ]
     },
     "artistry": {
       "model": "nan/qwen3.6",
-      "temperature": 0.7,
+      "temperature": 1.0,
       "fallback_models": [
-        { "model": "nan/gemma4", "temperature": 1.0 }
-      ]
+        {
+          "model": "nan/gemma4",
+          "temperature": 1.0
+        }
+      ],
+      "top_p": 0.95
     }
   },
-
   "hashline_edit": true,
-
   "runtime_fallback": {
     "enabled": true,
-    "retry_on_errors": [429, 500, 502, 503, 504],
+    "retry_on_errors": [
+      429,
+      500,
+      502,
+      503,
+      504
+    ],
     "max_fallback_attempts": 3,
     "cooldown_seconds": 15,
     "timeout_seconds": 10,
     "notify_on_fallback": true
   },
-
   "experimental": {
     "aggressive_truncation": true,
     "task_system": true,
     "dynamic_context_pruning": {
       "enabled": true,
       "notification": "minimal",
-      "turn_protection": { "enabled": true, "turns": 3 },
+      "turn_protection": {
+        "enabled": true,
+        "turns": 3
+      },
       "strategies": {
-        "deduplication": { "enabled": true },
-        "supersede_writes": { "enabled": true, "aggressive": false },
-        "purge_errors": { "enabled": true, "turns": 5 }
+        "deduplication": {
+          "enabled": true
+        },
+        "supersede_writes": {
+          "enabled": true,
+          "aggressive": false
+        },
+        "purge_errors": {
+          "enabled": true,
+          "turns": 5
+        }
       }
+    }
+  },
+  "background_task": {
+    "defaultConcurrency": 4,
+    "providerConcurrency": {
+      "nan": 4
     }
   }
 }

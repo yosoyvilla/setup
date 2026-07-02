@@ -1759,7 +1759,8 @@ File: `~/.config/opencode/opencode.jsonc`
   "lsp": true,
   "compaction": {
     "auto": true,
-    "prune": true
+    "prune": true,
+    "reserved": 32768
   },
   "permission": {
     "bash": {
@@ -1854,8 +1855,9 @@ File: `~/.config/opencode/oh-my-openagent.json`
 
 The full config is vendored in this repo as [`oh-my-openagent.json`](oh-my-openagent.json) — copy it to `~/.config/opencode/oh-my-openagent.json`. Key tuning applied (NaN model-card recipes):
 
-- **Sampling:** qwen3.6 agents/categories at `temperature: 0.7` (Qwen3 non-thinking recipe — avoids the low-temp repetition the model card warns about); gemma4 fallbacks at `temperature: 1.0` (Gemma 3 default); deepseek/mimo left at defaults.
-- **Reasoning:** `reasoningEffort` on the deepseek agents — `prometheus: high`, `sisyphus: medium` (orchestrator latency), `metis: high` (plan consultant, quality over latency), and category `deep: high`. NaN honors `reasoning_effort: low|medium|high` on deepseek-v4-flash. Metis was held at medium while NaN's per-key ceiling was 3 concurrent requests; the limit is now 100 rpm / 5 concurrent, which unblocked it.
+- **Sampling (Qwen3.6-35B-A3B official card, thinking mode is NaN's default):** coding-precision tier — `sisyphus-junior` and the qwen fallbacks inside sisyphus/prometheus/metis — at `temperature: 0.6, top_p: 0.95`; general/search/writing tier — `atlas`/`explore`/`librarian` agents and `quick`/`unspecified-low`/`writing`/`artistry` categories — at `temperature: 1.0, top_p: 0.95`. The card's `presence_penalty: 1.5` for the general profile is not settable client-side in opencode (server-side chat-template item — ask the provider). gemma4 fallbacks at `temperature: 1.0` (Gemma 3 default); deepseek/mimo sampling left alone (DeepSeek thinking mode ignores `temperature`/`top_p` entirely — drive it with `reasoning_effort` instead).
+- **Reasoning:** `reasoningEffort` on the deepseek agents — `prometheus: xhigh`, `sisyphus: medium` (orchestrator latency), `metis: high` (plan consultant), and category `deep: xhigh`. NaN accepts `reasoning_effort: low|medium|high|xhigh|max` on deepseek-v4-flash (live-tested); DeepSeek maps `xhigh` to `max` on OpenAI-compatible clients. Requires opencode >= 1.17.13, which forces reasoning mode for OpenAI-compatible reasoning models so these settings apply reliably on custom deployments.
+- **Background-task concurrency:** `background_task: {defaultConcurrency: 4, providerConcurrency: {nan: 4}}` caps omo's async background-task path below the 5-concurrent NaN key limit. Note this does NOT throttle ultrawork's normal synchronous fan-out — 429s there are absorbed by `runtime_fallback` retries.
 
 #### oh-my-openagent Agent Reference
 
@@ -1956,6 +1958,7 @@ cp opencode-commands/*.md ~/.config/opencode/commands/
 | `/council` | Convenes the adversarial council — fans the critic across multiple lenses plus the fact-checker, then synthesizes a verdict with recorded dissents. |
 | `/verify` | Runs the project's real test/lint/build commands, then routes the diff and results through the critic for a binding SHIP / REVISE / BLOCK verdict. |
 | `/smoke` | Harness self-test (3 stages): **Stage 1** runs the static harness checker (`check-harness.mjs`, Section 6.7), **Stage 2** confirms liveness on a NaN model, **Stage 3** scans the recent opencode log for errors. The verdict names the failing stage. Run after any config or plugin change. |
+| `/best-of` | Opt-in test-time scaling for hard problems: spawns N (default 3) independent candidate solutions in parallel with distinct angles, has `@critic` pick the winner, applies only the winner, then runs the verify pipeline. Expensive by design — do not use for routine edits. |
 
 ---
 
@@ -2043,7 +2046,7 @@ File: `~/.config/zed/settings.json`
     "model_parameters": [
       { "provider": "nan", "model": "deepseek-v4-flash", "temperature": 0.2 },
       { "provider": "nan", "model": "mimo-v2.5", "temperature": 0.2 },
-      { "provider": "nan", "model": "qwen3.6", "temperature": 0.7 },
+      { "provider": "nan", "model": "qwen3.6", "temperature": 0.6 },
       { "provider": "nan", "model": "gemma4", "temperature": 1.0 }
     ]
   },

@@ -6,7 +6,8 @@
   "lsp": true,
   "compaction": {
     "auto": true,
-    "prune": true
+    "prune": true,
+    "reserved": 32768
   },
   "permission": {
     "bash": {
