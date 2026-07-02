@@ -23,7 +23,7 @@
     "metis": {
       "model": "nan/deepseek-v4-flash",
       "temperature": 0.5,
-      "reasoningEffort": "medium",
+      "reasoningEffort": "high",
       "fallback_models": [
         { "model": "nan/mimo-v2.5" },
         { "model": "nan/qwen3.6", "temperature": 0.7 }

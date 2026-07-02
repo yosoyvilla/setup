@@ -1855,7 +1855,7 @@ File: `~/.config/opencode/oh-my-openagent.json`
 The full config is vendored in this repo as [`oh-my-openagent.json`](oh-my-openagent.json) — copy it to `~/.config/opencode/oh-my-openagent.json`. Key tuning applied (NaN model-card recipes):
 
 - **Sampling:** qwen3.6 agents/categories at `temperature: 0.7` (Qwen3 non-thinking recipe — avoids the low-temp repetition the model card warns about); gemma4 fallbacks at `temperature: 1.0` (Gemma 3 default); deepseek/mimo left at defaults.
-- **Reasoning:** `reasoningEffort` on the deepseek agents — `prometheus: high`, `sisyphus: medium`, `metis: medium`, and category `deep: high`. NaN honors `reasoning_effort: low|medium|high` on deepseek-v4-flash.
+- **Reasoning:** `reasoningEffort` on the deepseek agents — `prometheus: high`, `sisyphus: medium` (orchestrator latency), `metis: high` (plan consultant, quality over latency), and category `deep: high`. NaN honors `reasoning_effort: low|medium|high` on deepseek-v4-flash. Metis was held at medium while NaN's per-key ceiling was 3 concurrent requests; the limit is now 100 rpm / 5 concurrent, which unblocked it.
 
 #### oh-my-openagent Agent Reference
 
