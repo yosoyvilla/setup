@@ -35,6 +35,9 @@ Confirm it exists, in the right registry, with the right name, first.
 
 - If a package cannot be confirmed in its registry, do NOT install it. Report it
   as unverified and stop — do not guess an alternative name.
+- Alternatives you RECOMMEND get the same existence check as the package you
+  were asked about. Never name a replacement package without confirming it in
+  the registry first — a fabricated alternative defeats the whole check.
 - Never run an install command sourced directly from model output without the
   existence check above.
 - Surface every newly added dependency in your summary so it can be reviewed.

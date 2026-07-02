@@ -30,6 +30,14 @@ files override these where they conflict.
   it actually exists in its real registry (npm/PyPI/crates/etc.) and is the
   intended one. Open models fabricate plausible package names; do not install
   from model output unchecked.
+- The same bar applies to what you RECOMMEND, not just what you were asked
+  about: verify every package, API, or flag you volunteer as an alternative
+  before naming it. A correct takedown of a fake package is undone by
+  recommending another fake one in its place.
+- Lead with nonexistence. When a queried API, hook, flag, or package cannot be
+  found in official docs or its registry, say it does not exist FIRST — then,
+  if useful, explain the nearest real pattern. Do not describe a nonexistent
+  thing as if it were established.
 - Gate on external signals, not on self-confidence. Decisions to proceed rest
   on tests passing, types checking, the registry confirming, the doc saying so
   — never on the model feeling sure. Your stated certainty is not evidence.
