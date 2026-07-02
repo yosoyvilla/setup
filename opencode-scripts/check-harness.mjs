@@ -50,6 +50,15 @@ const DENYLIST = [
   "terraform destroy*", "terraform force-unlock*", "kubectl delete namespace*",
 ];
 const SKILL_DENY = ["terraform-devops", "incident-triage", "spec-first"];
+// Skills inventory for ~/.agents/skills (shared by opencode + Zed). A new or
+// removed skill silently changes the model-facing tool surface of BOTH tools,
+// so additions must be deliberate: update this list when you intend the change.
+const EXPECTED_SKILLS = new Set([
+  "algorithmic-art", "canvas-design", "computer-use", "find-skills",
+  "frontend-design", "incident-triage", "k8s-debug", "karpathy-guidelines",
+  "orca-cli", "skill-creator", "spec-first", "terraform-devops",
+  "validating-packages", "verifying-changes", "webapp-testing",
+]);
 
 const errors = [];
 const fail = (m) => errors.push(m);
@@ -116,9 +125,12 @@ function checkOpencode(oc) {
       fail(`${rel(P.oc)}: ${id}.limit.context must be ${CTX[id]} (got ${m?.limit?.context})`);
   }
 
-  // Plugin pinned to @latest.
-  if (!(oc.plugin ?? []).includes("oh-my-openagent@latest"))
-    fail(`${rel(P.oc)}: plugin must include "oh-my-openagent@latest"`);
+  // Plugin pinned to an EXACT version. "@latest" is forbidden: opencode's Bun
+  // cache never re-resolves it (stale-forever), so it silently pins anyway —
+  // an exact pin makes the version explicit and upgrades deliberate.
+  const omoPins = (oc.plugin ?? []).filter((p) => String(p).startsWith("oh-my-openagent@"));
+  if (omoPins.length !== 1 || !/^oh-my-openagent@\d+\.\d+\.\d+$/.test(omoPins[0]))
+    fail(`${rel(P.oc)}: plugin must include exactly one exact-version pin "oh-my-openagent@X.Y.Z" (got ${JSON.stringify(omoPins)})`);
 
   // Bash catastrophic denylist.
   const bash = oc.permission?.bash ?? {};
@@ -234,12 +246,34 @@ function checkMarkdownDir(dir, required) {
   }
 }
 
+function checkSkillsInventory() {
+  const dir = path.join(HOME, ".agents/skills");
+  let entries;
+  try { entries = fs.readdirSync(dir).filter((e) => !e.startsWith(".")); }
+  catch { fail(`${rel(dir)}: directory missing or unreadable`); return; }
+  for (const e of entries)
+    if (!EXPECTED_SKILLS.has(e)) fail(`${rel(dir)}: unexpected skill "${e}" (add deliberately to EXPECTED_SKILLS or remove it)`);
+  for (const s of EXPECTED_SKILLS)
+    if (!entries.includes(s)) fail(`${rel(dir)}: expected skill "${s}" is missing`);
+  // webapp-testing must stay a symlink to the canonical ~/.claude/skills copy
+  // (single emoji-free source; both discovery paths must resolve identically).
+  const link = path.join(dir, "webapp-testing/SKILL.md");
+  const target = path.join(HOME, ".claude/skills/webapp-testing/SKILL.md");
+  try {
+    if (!fs.lstatSync(link).isSymbolicLink())
+      fail(`${rel(link)}: must be a symlink to ${rel(target)}`);
+    else if (path.resolve(path.dirname(link), fs.readlinkSync(link)) !== target)
+      fail(`${rel(link)}: symlink must resolve to ${rel(target)}`);
+  } catch { fail(`${rel(link)}: missing (expected symlink to ${rel(target)})`); }
+}
+
 // ---- run ----
 checkOpencode(parseJson(P.oc, { jsonc: true }));
 checkOmo(parseJson(P.omo));
 checkOc2(parseJson(P.oc2));
 checkZed(parseJson(P.zed));
 checkAgentsParity();
+checkSkillsInventory();
 checkMarkdownDir(P.agentsDir, ["description", "mode"]);
 checkMarkdownDir(P.commandsDir, ["description"]);
 

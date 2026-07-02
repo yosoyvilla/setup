@@ -42,7 +42,7 @@
     }
   },
   "plugin": [
-    "oh-my-openagent@latest"
+    "oh-my-openagent@4.15.1"
   ],
   "provider": {
     "nan": {

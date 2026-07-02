@@ -24,3 +24,4 @@ Thumbs.db
 # Python build artifacts
 __pycache__/
 *.pyc
+.claude/

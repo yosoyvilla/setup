@@ -117,9 +117,9 @@ kubectl get nodes -o wide        # Ready status, OS, version
 | project-a tooling | `kubectx usw2-tooling-eks-pr` |
 | project-a staging | `kubectx usw2-staging-eks-st` |
 | project-a prod | `kubectx usw2-prod-eks-pr` |
-| project-c | `AWS_PROFILE=project-c aws eks update-kubeconfig --name project-c-planters-eks --region us-east-1` |
+| project-c | `AWS_PROFILE=project-c aws eks update-kubeconfig --name project-c-eks --region us-east-1` |
 | project-d | `aws eks update-kubeconfig --name project-d-eks --region us-east-2` |
-| project-b GKE staging | `gcloud container clusters get-credentials k8s-e24gcp-staging --zone us-central1-a --project e24gcp-staging` |
-| project-b GKE prod | `gcloud container clusters get-credentials k8s-e24gcp-prod --zone us-central1-a --project e24gcp-prod` |
+| project-b GKE staging | `gcloud container clusters get-credentials k8s-project-b-staging --zone us-central1-a --project project-b-staging` |
+| project-b GKE prod | `gcloud container clusters get-credentials k8s-project-b-prod --zone us-central1-a --project project-b-prod` |
 
 **project-c note:** kubectl context drifts to GKE between sessions. Always re-run the update-kubeconfig command at the start of a project-c session.

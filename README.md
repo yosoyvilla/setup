@@ -1742,9 +1742,9 @@ brew list opencode  # → .../Cellar/opencode/<version>/bin/opencode
 
 > **Provider note:** This build runs entirely on the NaN provider (see Section 6.2). No OpenCode Zen subscription is required — only a `NAN_API_KEY` in the environment.
 
-The oh-my-openagent plugin does **not** need a manual install. opencode installs npm plugins listed in the `plugin` array of `opencode.jsonc` (Section 6.2) **automatically at startup, using Bun**, caching them under `~/.cache/opencode/node_modules/` ([opencode plugins docs](https://opencode.ai/docs/plugins/)). So once `opencode.jsonc` is in place and Bun is installed (Section 3.5), the plugin is fetched on the next `opencode` launch — just start opencode once.
+The oh-my-openagent plugin does **not** need a manual install. opencode installs npm plugins listed in the `plugin` array of `opencode.jsonc` (Section 6.2) **automatically at startup, using Bun**, caching them under `~/.cache/opencode/packages/<name>@<spec>/node_modules/` ([opencode plugins docs](https://opencode.ai/docs/plugins/)). So once `opencode.jsonc` is in place and Bun is installed (Section 3.5), the plugin is fetched on the next `opencode` launch — just start opencode once.
 
-> **Pin a version if desired:** use `"oh-my-openagent@4.9.2"` instead of `@latest` in the `plugin` array. If `@ast-grep/cli`'s postinstall fails during plugin resolution, it is safe to ignore — AST grep degrades gracefully.
+> **Always pin an exact version** (e.g. `"oh-my-openagent@4.15.1"`), never `@latest`: opencode's Bun cache resolves an `@latest` spec once and never re-resolves it, so `@latest` silently pins to whatever was current at first launch. An exact pin makes the loaded version explicit and upgrades deliberate (change the pin, restart opencode, verify with the harness checker). If `@ast-grep/cli`'s postinstall fails during plugin resolution, it is safe to ignore — AST grep degrades gracefully.
 
 ### 6.2 Main Config (`opencode.jsonc`)
 
@@ -1795,7 +1795,7 @@ File: `~/.config/opencode/opencode.jsonc`
     }
   },
   "plugin": [
-    "oh-my-openagent@latest"
+    "oh-my-openagent@4.15.1"
   ],
   "provider": {
     "nan": {
@@ -1910,7 +1910,7 @@ File: `~/.opencode/opencode.json` — **must exist and be clean**
 
 ```bash
 opencode debug info
-# Expected: plugins: - oh-my-openagent@latest (one entry only)
+# Expected: plugins: - oh-my-openagent@4.15.1 (one entry only, exact pin)
 
 opencode agent list | grep -E "^[A-Za-z].*\(primary|subagent\)"
 # Expected: Sisyphus, Prometheus, Metis, Momus, Atlas, oracle, explore, librarian, ...
@@ -1961,7 +1961,7 @@ cp opencode-commands/*.md ~/.config/opencode/commands/
 
 ### 6.7 Harness Checker, Browser/E2E, and Vision
 
-**Harness checker (`opencode-scripts/check-harness.mjs`)** — a static, offline validator (no model calls, NaN-safe) that enforces the harness invariants: NaN-only model refs, `AGENTS.md` byte-parity (opencode == Zed), the bash denylist, Engram wiring, model context windows, and custom agent/command frontmatter. Install and run:
+**Harness checker (`opencode-scripts/check-harness.mjs`)** — a static, offline validator (no model calls, NaN-safe) that enforces the harness invariants: NaN-only model refs, `AGENTS.md` byte-parity (opencode == Zed), the bash denylist, Engram wiring, model context windows, custom agent/command frontmatter, an exact-version plugin pin (never `@latest` — see Section 6.1), and the `~/.agents/skills` inventory (unknown or missing skills fail; adding a skill means deliberately updating `EXPECTED_SKILLS` in the checker). Install and run:
 ```bash
 mkdir -p ~/.config/opencode/scripts
 cp opencode-scripts/check-harness.mjs ~/.config/opencode/scripts/
@@ -2420,7 +2420,7 @@ Copy this list and check off each item:
 - [ ] `~/.config/opencode/commands/` populated (council, verify, smoke)
 - [ ] `~/.config/opencode/tui.json` created (empty plugins)
 - [ ] `~/.opencode/opencode.json` created (empty plugins)
-- [ ] Verification: `opencode debug info` shows only `oh-my-openagent@latest`
+- [ ] Verification: `opencode debug info` shows only `oh-my-openagent@4.15.1` (exact pin)
 
 **Zed**
 - [ ] Installed
