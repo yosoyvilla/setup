@@ -27,7 +27,11 @@ Target (optional): $ARGUMENTS
    Quote the actual pass/fail counts and any error lines. Never paraphrase a
    result you did not run.
 4. **Adversarial review.** Spawn `@critic` on the diff plus the check output.
-   Wait for its structured verdict.
+   Wait for its structured verdict. Give reviewers the diff and check output
+   only — never your reasoning or justification for the change.
+   **High-risk changes** (prod infra, auth, data migrations): also spawn
+   `@thermo-nuclear-review` on the same diff, in parallel and independently —
+   neither reviewer sees the other's output. BLOCK if either blocks.
 5. **Report** concisely:
    - Each check: command run and PASS/FAIL with evidence.
    - Critic verdict: SHIP / REVISE / BLOCK and its top fix.

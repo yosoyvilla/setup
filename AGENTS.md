@@ -80,6 +80,30 @@ evidence bar as everything else.
   how it was verified. Report failures honestly — never claim success unproven.
 - Keep changes small and reviewable. Split large ones. Read a file before you
   edit it.
+- Tests must be falsifiable. An assertion that passes on both success and
+  failure (e.g. `status in (200, 400, 500)`, clicking without checking the
+  response, printing a checkmark unconditionally) is not a test. For a bugfix,
+  demonstrate the test failing before the fix and passing after.
+- UI changes are verified in a real browser, not by reading code: drive the
+  changed flow with the playwright tools, assert the network response status
+  (a 2xx, not merely "the click happened"), and screenshot the result with a
+  vision-capable model. Functional checks alone are not enough — run the
+  visual-qa skill (dead-utility probe, desktop+mobile screenshots, vision
+  review for alignment/overflow/contrast) before calling UI work done.
+- Version control is the floor. If the project has no git repository, run
+  `git init`, add a `.gitignore`, and make an initial commit before substantive
+  work; commit after each verified change. Unversioned multi-day work is not
+  acceptable.
+- Any dependency installed during a session (pip/npm/pnpm/uv/etc.) is added to
+  the project's manifest (requirements.txt, package.json, ...) in the same
+  change, and the build is re-run once from the manifest to prove it.
+- Fallbacks must be loud. A fallback or degraded path logs at ERROR, marks its
+  output as degraded, and is surfaced to the user. Never persist placeholder or
+  fallback output as if it were real data, and never swallow an exception
+  without logging what was lost.
+- A task or todo may be marked completed only with verification evidence: the
+  command that proved it and its observed result. "It should work" does not
+  close a task.
 
 ## Code
 - SOLID/KISS/DRY applied pragmatically, not dogmatically. Extract on the third
@@ -92,3 +116,33 @@ evidence bar as everything else.
 - Single-line commit messages. No co-author trailer. No emojis.
 - No emojis in documentation. Do not create new markdown/doc files without
   explicit approval — ask first.
+- Docs describing implemented behavior must distinguish `verified` (state how:
+  test, command, file:line) from `intended`. Never document a feature as
+  working without having verified it this session — project docs are the next
+  session's ground truth, so an unverified claim compounds.
+- Never write secret values (keys, tokens, passwords) into docs, memory, or
+  commit messages — reference the environment variable name instead.
+- TypeScript: no inline `import()` type annotations in signatures; switch
+  statements over union types must be exhaustive (assert the `never` default).
+
+## Agent Workflow Principles
+
+Adapted from Bun's Zig-to-Rust rewrite methodology (bun.com/blog/bun-in-rust).
+
+- Adversarial diff review before commit. Behavior-changing diffs (more than one
+  file, or any infra/config change; doc-only, formatting-only, and rename-only
+  diffs excluded) get a blind adversarial review before commit — run `/verify`,
+  which routes the diff to the critic. The reviewer sees the diff only, never
+  the implementer's reasoning, and assumes the code is wrong. A workaround that
+  needs a paragraph-long justification comment means the code is wrong — fix
+  the code. High-risk changes (prod infra, auth, data migrations): two
+  independent reviews — `@critic` and `@thermo-nuclear-review` — neither seeing
+  the other's output. (opencode: `@critic`, `/verify`. Zed: the
+  thermo-nuclear-code-quality-review and verify-this skills.)
+- Fix the workflow, not the output. When an agent, skill, or command produces
+  the same bad pattern twice, edit its definition instead of hand-fixing
+  instances — one definition edit fixes the class of error.
+- Trial run before fan-out. Before any bulk or parallel operation over 3+
+  similar items (mass edits, multi-file migrations, `ultrawork` fan-outs), run
+  2-3 representative items first, review the results, then scale. Never fan
+  out an unproven workflow.

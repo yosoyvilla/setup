@@ -47,6 +47,9 @@ Look specifically for:
   backed by evidence.
 - Security, data-loss, and irreversibility risks.
 - Simpler alternatives that were not considered.
+- Workarounds hiding behind justification: a workaround that needs a
+  paragraph-long comment to explain why it is OK means the code is wrong —
+  flag it and name the real fix.
 
 ## Rules
 
