@@ -17,6 +17,17 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
 
 `install.sh` is **idempotent** (safe to re-run) and **unattended** (never prompts, never writes secrets). It auto-detects the OS, backs up any existing configs before overwriting, templatizes machine-specific paths, validates the opencode harness at the end, and prints a **TODO list** of the handful of steps it cannot automate (API keys, `gh`/`aws`/`gcloud` auth, the Zed API-key UI step, launching opencode once to install the plugin). The sections below document every step the script performs, for manual setup, Fedora, or reference.
 
+### Claude Code only (for teammates)
+
+If you use **Claude Code and nothing else** from this stack, run the dedicated installer instead:
+
+```bash
+git clone git@github.com:yosoyvilla/setup.git && cd setup
+./install-claude.sh
+```
+
+`install-claude.sh` installs the Claude Code CLI and places everything under `~/.claude` (CLAUDE.md, settings, 18 agents, skills with support scripts, rules, the auto-sync hook) — and touches **nothing else**: no opencode, no Zed, no Engram, no extra tooling. Same guarantees as `install.sh` (idempotent, unattended, backups). `install.sh` delegates its Claude Code section to this script, so the logic exists once.
+
 ---
 
 ## Table of Contents
@@ -112,7 +123,7 @@ When you set up a new machine:
 - `zed-skills/*` → copy to `~/.agents/skills/` (Zed/opencode shared skills, incl. `webapp-testing/scripts/with_server.py`; see Section 7.3)
 - `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, claude-settings.local.json, opencode.jsonc, opencode-secondary.json, tui.json, zed-settings.json); machine-specific paths use `__HOME__`/`__ENGRAM__` tokens resolved at install time
 
-Or just run `./install.sh` (Quick Start) to do all of the above automatically.
+Or just run `./install.sh` (Quick Start) to do all of the above automatically — or `./install-claude.sh` for the Claude Code items only.
 
 ---
 

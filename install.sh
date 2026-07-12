@@ -146,13 +146,10 @@ else ok "oh-my-zsh present"; fi
 # 6. AI tools: Claude Code, opencode, Zed, Engram
 # ════════════════════════════════════════════════════════════════════
 section "AI tools"
-# Claude Code — native installer (recommended, auto-updating); fall back to npm
+# Claude Code — CLI install + all ~/.claude assets live in install-claude.sh
+# (single source of truth; teammates who only use Claude Code run it directly)
 export PATH="$HOME/.local/bin:$PATH"
-if ! have claude; then
-  curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1 && ok "Claude Code (native)" \
-    || { npm install -g @anthropic-ai/claude-code >/dev/null 2>&1 && ok "Claude Code (npm)" || err "Claude Code install"; }
-fi
-have claude && ok "claude $(claude --version 2>/dev/null | head -1)" || warn "claude not on PATH (ensure ~/.local/bin in PATH)"
+bash "$REPO_DIR/install-claude.sh" && ok "Claude Code setup (install-claude.sh)" || err "Claude Code setup (see install-claude.sh output above)"
 # opencode
 if ! have opencode; then
   if [ "$OS" = "macos" ]; then brew install anomalyco/tap/opencode >/dev/null 2>&1 && ok "opencode" || err "opencode";
@@ -174,24 +171,11 @@ else ok "Engram present"; fi
 # 7. Place vendored config / agents / skills / rules / hooks
 # ════════════════════════════════════════════════════════════════════
 section "Placing configs and assets"
-mkdir -p "$HOME/.claude/agents" "$HOME/.claude/skills" "$HOME/.claude/rules" "$HOME/.claude/hooks" \
-         "$HOME/.config/opencode/agents" "$HOME/.config/opencode/commands" "$HOME/.config/opencode/scripts" \
+mkdir -p "$HOME/.config/opencode/agents" "$HOME/.config/opencode/commands" "$HOME/.config/opencode/scripts" \
          "$HOME/.config/opencode/plugins" "$HOME/.config/zed" "$HOME/.agents/skills"
-
-# Claude Code
-backup "$HOME/.claude/CLAUDE.md" "$REPO_DIR/config/CLAUDE.md"
-cp "$REPO_DIR/config/CLAUDE.md" "$HOME/.claude/CLAUDE.md" && ok "CLAUDE.md"
 ENGRAM_BIN="$(command -v engram || echo engram)"
-backup "$HOME/.claude/settings.json" "$REPO_DIR/config/claude-settings.json"
-sed "s#__HOME__#$HOME#g" "$REPO_DIR/config/claude-settings.json" > "$HOME/.claude/settings.json" && ok "claude settings.json (paths templatized)"
-if [ -f "$REPO_DIR/config/claude-settings.local.json" ]; then
-  backup "$HOME/.claude/settings.local.json" "$REPO_DIR/config/claude-settings.local.json"
-  sed "s#__HOME__#$HOME#g" "$REPO_DIR/config/claude-settings.local.json" > "$HOME/.claude/settings.local.json" && ok "claude settings.local.json (permissions)"
-fi
-cp "$REPO_DIR"/agents/*.md "$HOME/.claude/agents/" && ok "$(ls "$REPO_DIR"/agents/*.md | wc -l | tr -d ' ') CC agents"
-cp -R "$REPO_DIR"/skills/* "$HOME/.claude/skills/" && ok "CC skills (folders incl. support scripts)"
-cp "$REPO_DIR"/rules/*.md "$HOME/.claude/rules/" && ok "rules"
-cp "$REPO_DIR"/hooks/* "$HOME/.claude/hooks/" && chmod +x "$HOME/.claude/hooks/"*.sh 2>/dev/null && ok "hooks (chmod +x)"
+
+# Claude Code assets already placed by install-claude.sh (AI tools section)
 
 # opencode
 backup "$HOME/.config/opencode/opencode.jsonc" "$REPO_DIR/config/opencode.jsonc"
@@ -255,8 +239,7 @@ todo "Zed edit-prediction key (GUI-launched Zed): launchctl setenv ZED_OPEN_AI_C
 todo "Set the NaN API key in Zed: Cmd/Ctrl+, → AI / Language Models → nan provider → API key"
 todo "Authenticate: gh auth login ;  aws configure (or awsume) ;  gcloud auth login"
 todo "Launch opencode once so it auto-installs the oh-my-openagent plugin (needs NAN_API_KEY set)"
-todo "Claude Code plugins: enabledPlugins is preconfigured in settings.json; first 'claude' launch prompts once per plugin to trust/install"
-todo "Auto-sync hook pushes to the Obsidian vault — clone it or the hook will no-op: ~/Documents/obsidian-vault"
+todo "Claude Code manual steps: see the install-claude.sh TODO list printed above (login, plugin trust prompts, optional vault clone)"
 
 section "Done"
 [ ${#FAILED[@]} -eq 0 ] && ok "core install completed with no hard failures" || { printf "${c_red}Failures:${c_off}\n"; for x in "${FAILED[@]}"; do echo "  - $x"; done; }

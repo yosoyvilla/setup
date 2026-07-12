@@ -13,6 +13,11 @@ LOG="$CLAUDE_DIR/sync.log"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
 
+# The vault is optional (personal machines only). Bail out BEFORE any mkdir:
+# the sync_dir calls below would otherwise materialize a phantom vault tree on
+# machines that never cloned it.
+[ -d "$VAULT/.git" ] || { log "Vault not cloned at $VAULT — skipping sync"; exit 0; }
+
 sync_dir() {
   local src="$1" dst="$2" label="$3"
   mkdir -p "$dst"
