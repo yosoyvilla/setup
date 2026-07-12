@@ -24,6 +24,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
 
 const HOME = os.homedir();
 const P = {
@@ -58,7 +59,20 @@ const EXPECTED_SKILLS = new Set([
   "frontend-design", "incident-triage", "k8s-debug", "karpathy-guidelines",
   "orca-cli", "skill-creator", "spec-first", "terraform-devops",
   "validating-packages", "verifying-changes", "webapp-testing",
+  // Imported 2026-07-07 from cursor/plugins cursor-team-kit (MIT). Anthropic
+  // proprietary skills (docx/xlsx/pptx/pdf) were deliberately NOT imported:
+  // their LICENSE.txt forbids copies outside Anthropic services.
+  "deslop", "thermo-nuclear-code-quality-review", "verify-this",
+  // Built 2026-07-07 from the Swipe visual audit (dead-utilities root cause):
+  "visual-qa",
 ]);
+
+// Protected-file globs that must be denied in permission.edit (path-glob layer
+// of file protection; content-aware guards live in plugins/harness-guards.js).
+const PROTECTED_EDIT_DENY = [
+  "**/.env", "**/.env.*", "**/*.tfstate", "**/*.tfvars",
+  "**/*.pem", "**/*.key", "**/id_rsa*", "**/secrets/**",
+];
 
 const errors = [];
 const fail = (m) => errors.push(m);
@@ -147,6 +161,28 @@ function checkOpencode(oc) {
     fail(`${rel(P.oc)}: mcp.engram.enabled must be true`);
   if (!(oc.mcp?.engram?.command ?? []).some((s) => String(s).includes("engram")))
     fail(`${rel(P.oc)}: mcp.engram.command must invoke engram`);
+
+  // Protected-file globs (v3): path layer of file protection.
+  const edit = oc.permission?.edit ?? {};
+  for (const k of PROTECTED_EDIT_DENY)
+    if (edit[k] !== "deny") fail(`${rel(P.oc)}: permission.edit["${k}"] must be "deny" (got ${edit[k]})`);
+  if (edit["**/.env.example"] !== "allow")
+    fail(`${rel(P.oc)}: permission.edit["**/.env.example"] must be "allow" (last-match override)`);
+
+  // Claude rules mirrored via instructions glob (v3): single source of truth.
+  const rulesGlob = path.join(HOME, ".claude/rules/*.md");
+  if (!(oc.instructions ?? []).includes(rulesGlob))
+    fail(`${rel(P.oc)}: instructions must include ${rel(rulesGlob)}`);
+}
+
+// harness-guards plugin (v3): file must exist and parse. Enforcement that is
+// otherwise invisible until it silently stops loading.
+function checkHarnessGuards() {
+  const plugin = path.join(HOME, ".config/opencode/plugins/harness-guards.js");
+  if (!fs.existsSync(plugin)) { fail(`${rel(plugin)}: missing (auto-enforcement plugin)`); return; }
+  const res = spawnSync(process.execPath, ["--check", plugin], { encoding: "utf8" });
+  if (res.status !== 0)
+    fail(`${rel(plugin)}: does not parse (node --check: ${String(res.stderr).split("\n")[0]})`);
 }
 
 function checkOmo(omo) {
@@ -274,6 +310,7 @@ checkOc2(parseJson(P.oc2));
 checkZed(parseJson(P.zed));
 checkAgentsParity();
 checkSkillsInventory();
+checkHarnessGuards();
 checkMarkdownDir(P.agentsDir, ["description", "mode"]);
 checkMarkdownDir(P.commandsDir, ["description"]);
 

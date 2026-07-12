@@ -82,7 +82,7 @@ gh pr list --state merged --limit 5   # recent merged PRs across any GitHub repo
 1. **Rollback deploy**
    - K8s: `kubectl rollout undo deployment/<name>`
    - ArgoCD (project-c): `argocd app rollback <app>`
-   - Dokploy: redeploy previous image via Dokploy UI
+   - Dokploy (project-d): redeploy previous image via Dokploy UI
 2. **Scale up** — `kubectl scale deployment/<name> --replicas=<n>`
 3. **Failover** — switch traffic to healthy region/cluster
 4. **Hotfix** — only if rollback would reintroduce a worse problem

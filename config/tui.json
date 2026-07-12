@@ -1,3 +1,5 @@
 {
-  "plugin": []
+  "plugin": [
+    "oh-my-openagent@4.16.1"
+  ]
 }

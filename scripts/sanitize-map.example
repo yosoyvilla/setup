@@ -1,0 +1,13 @@
+# Format for ~/.config/setup-sync/sanitize-map.txt (used by sync-from-live.sh).
+# The REAL map is machine-local and must NEVER be committed to this repo —
+# committing it would reveal the very names it scrubs. Recreate it on a new
+# machine from the private Obsidian vault notes.
+#
+# Tab-separated: pattern<TAB>replacement
+# Applied top-to-bottom, case-insensitive, substring match.
+# Put the most specific patterns FIRST (acmecorp.com before acmecorp).
+acmecorp.com	example.com
+acmecorp	project-a
+clientb-portal	portal-1
+clientb	project-b
+jdoe	user

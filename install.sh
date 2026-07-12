@@ -176,7 +176,7 @@ else ok "Engram present"; fi
 section "Placing configs and assets"
 mkdir -p "$HOME/.claude/agents" "$HOME/.claude/skills" "$HOME/.claude/rules" "$HOME/.claude/hooks" \
          "$HOME/.config/opencode/agents" "$HOME/.config/opencode/commands" "$HOME/.config/opencode/scripts" \
-         "$HOME/.config/zed" "$HOME/.agents/skills"
+         "$HOME/.config/opencode/plugins" "$HOME/.config/zed" "$HOME/.agents/skills"
 
 # Claude Code
 backup "$HOME/.claude/CLAUDE.md" "$REPO_DIR/config/CLAUDE.md"
@@ -184,14 +184,18 @@ cp "$REPO_DIR/config/CLAUDE.md" "$HOME/.claude/CLAUDE.md" && ok "CLAUDE.md"
 ENGRAM_BIN="$(command -v engram || echo engram)"
 backup "$HOME/.claude/settings.json" "$REPO_DIR/config/claude-settings.json"
 sed "s#__HOME__#$HOME#g" "$REPO_DIR/config/claude-settings.json" > "$HOME/.claude/settings.json" && ok "claude settings.json (paths templatized)"
+if [ -f "$REPO_DIR/config/claude-settings.local.json" ]; then
+  backup "$HOME/.claude/settings.local.json" "$REPO_DIR/config/claude-settings.local.json"
+  sed "s#__HOME__#$HOME#g" "$REPO_DIR/config/claude-settings.local.json" > "$HOME/.claude/settings.local.json" && ok "claude settings.local.json (permissions)"
+fi
 cp "$REPO_DIR"/agents/*.md "$HOME/.claude/agents/" && ok "$(ls "$REPO_DIR"/agents/*.md | wc -l | tr -d ' ') CC agents"
-for f in "$REPO_DIR"/skills/*.md; do n="$(basename "$f" .md)"; mkdir -p "$HOME/.claude/skills/$n"; cp "$f" "$HOME/.claude/skills/$n/SKILL.md"; done && ok "CC skills (flat→folder/SKILL.md)"
+cp -R "$REPO_DIR"/skills/* "$HOME/.claude/skills/" && ok "CC skills (folders incl. support scripts)"
 cp "$REPO_DIR"/rules/*.md "$HOME/.claude/rules/" && ok "rules"
 cp "$REPO_DIR"/hooks/* "$HOME/.claude/hooks/" && chmod +x "$HOME/.claude/hooks/"*.sh 2>/dev/null && ok "hooks (chmod +x)"
 
 # opencode
 backup "$HOME/.config/opencode/opencode.jsonc" "$REPO_DIR/config/opencode.jsonc"
-cp "$REPO_DIR/config/opencode.jsonc" "$HOME/.config/opencode/opencode.jsonc" && ok "opencode.jsonc"
+sed "s#__HOME__#$HOME#g" "$REPO_DIR/config/opencode.jsonc" > "$HOME/.config/opencode/opencode.jsonc" && ok "opencode.jsonc (paths templatized)"
 cp "$REPO_DIR/config/tui.json" "$HOME/.config/opencode/tui.json" && ok "opencode tui.json"
 mkdir -p "$HOME/.opencode"
 cp "$REPO_DIR/config/opencode-secondary.json" "$HOME/.opencode/opencode.json" && ok "opencode secondary config (.opencode/opencode.json, prevents drift)"
@@ -199,13 +203,24 @@ cp "$REPO_DIR/oh-my-openagent.json" "$HOME/.config/opencode/oh-my-openagent.json
 cp "$REPO_DIR/AGENTS.md" "$HOME/.config/opencode/AGENTS.md" && ok "opencode AGENTS.md"
 cp "$REPO_DIR"/opencode-agents/*.md "$HOME/.config/opencode/agents/" && ok "opencode agents"
 cp "$REPO_DIR"/opencode-commands/*.md "$HOME/.config/opencode/commands/" && ok "opencode commands"
-cp "$REPO_DIR"/opencode-scripts/*.mjs "$HOME/.config/opencode/scripts/" && ok "opencode scripts (check-harness.mjs)"
+cp "$REPO_DIR"/opencode-scripts/*.mjs "$HOME/.config/opencode/scripts/" && ok "opencode scripts (check-harness + harness-guards lib/tests)"
+if ls "$REPO_DIR"/opencode-plugins/*.js >/dev/null 2>&1; then
+  cp "$REPO_DIR"/opencode-plugins/*.js "$HOME/.config/opencode/plugins/" && ok "opencode plugins (harness-guards)"
+fi
 
 # Zed (AGENTS.md byte-identical to opencode; engram path resolved for this machine)
 cp "$REPO_DIR/AGENTS.md" "$HOME/.config/zed/AGENTS.md" && ok "Zed AGENTS.md (byte-identical)"
 backup "$HOME/.config/zed/settings.json" "$REPO_DIR/config/zed-settings.json"
 sed "s#__ENGRAM__#$ENGRAM_BIN#g" "$REPO_DIR/config/zed-settings.json" > "$HOME/.config/zed/settings.json" && ok "Zed settings.json (engram → $ENGRAM_BIN)"
 cp -R "$REPO_DIR"/zed-skills/* "$HOME/.agents/skills/" && ok "zed-skills → ~/.agents/skills (incl. webapp-testing/scripts)"
+# webapp-testing must be a SYMLINK to the Claude Code copy (single source of
+# truth; the harness checker enforces this topology)
+if [ -f "$HOME/.claude/skills/webapp-testing/SKILL.md" ]; then
+  ln -sf "$HOME/.claude/skills/webapp-testing/SKILL.md" "$HOME/.agents/skills/webapp-testing/SKILL.md"
+  rm -rf "$HOME/.agents/skills/webapp-testing/scripts"
+  ln -s "$HOME/.claude/skills/webapp-testing/scripts" "$HOME/.agents/skills/webapp-testing/scripts" 2>/dev/null
+  ok "webapp-testing symlinked → ~/.claude/skills copy"
+fi
 
 # ════════════════════════════════════════════════════════════════════
 # 8. Playwright (browser/E2E + vision)
@@ -240,6 +255,7 @@ todo "Zed edit-prediction key (GUI-launched Zed): launchctl setenv ZED_OPEN_AI_C
 todo "Set the NaN API key in Zed: Cmd/Ctrl+, → AI / Language Models → nan provider → API key"
 todo "Authenticate: gh auth login ;  aws configure (or awsume) ;  gcloud auth login"
 todo "Launch opencode once so it auto-installs the oh-my-openagent plugin (needs NAN_API_KEY set)"
+todo "Claude Code plugins: enabledPlugins is preconfigured in settings.json; first 'claude' launch prompts once per plugin to trust/install"
 todo "Auto-sync hook pushes to the Obsidian vault — clone it or the hook will no-op: ~/Documents/obsidian-vault"
 
 section "Done"

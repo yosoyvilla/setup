@@ -33,7 +33,7 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
    - [Agents](#54-agents)
    - [Skills](#55-skills)
    - [Rules](#56-rules)
-   - [Hook Scripts (auto-sync + engram-sync)](#57-hook-scripts)
+   - [Hook Scripts (auto-sync)](#57-hook-scripts)
 6. [opencode CLI](#6-opencode-cli)
    - [Installation](#61-installation)
    - [Main Config](#62-main-config-opencodejsonc)
@@ -52,6 +52,7 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
 12. [Quick Reference](#12-quick-reference)
 13. [Post-Install Checklist](#13-post-install-checklist)
 14. [Troubleshooting](#14-troubleshooting)
+15. [Keeping the Repo in Sync](#15-keeping-the-repo-in-sync)
 
 ---
 
@@ -100,15 +101,16 @@ The files in `agents/` and `skills/` are **Claude Code files only** — they use
 
 When you set up a new machine:
 - `agents/*.md` → copy to `~/.claude/agents/` (Claude Code)
-- `skills/*.md` → copy to `~/.claude/skills/<name>/SKILL.md` (Claude Code)
+- `skills/<name>/` → copy to `~/.claude/skills/<name>/` (Claude Code; folders with `SKILL.md` plus support scripts such as `webapp-testing/scripts/with_server.py`)
 - `hooks/*` → copy to `~/.claude/hooks/` (Claude Code; see Section 5.7)
 - `oh-my-openagent.json` → `~/.config/opencode/oh-my-openagent.json` (opencode; vendored file, see Section 6.3)
 - `opencode-agents/*.md` → `~/.config/opencode/agents/`, `opencode-commands/*.md` → `~/.config/opencode/commands/` (opencode; see Section 6.6)
-- `opencode-scripts/check-harness.mjs` → `~/.config/opencode/scripts/` (opencode harness checker; see Section 6.7)
+- `opencode-scripts/*.mjs` → `~/.config/opencode/scripts/` (harness checker + harness-guards lib and tests; see Section 6.7)
+- `opencode-plugins/*.js` → `~/.config/opencode/plugins/` (harness-guards enforcement plugin)
 - `AGENTS.md` → byte-identical to **both** `~/.config/opencode/AGENTS.md` and `~/.config/zed/AGENTS.md` (see Section 6.6)
 - `rules/*.md` → `~/.claude/rules/` (Claude Code shared rules: terraform, kubernetes, security-baseline, go)
 - `zed-skills/*` → copy to `~/.agents/skills/` (Zed/opencode shared skills, incl. `webapp-testing/scripts/with_server.py`; see Section 7.3)
-- `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, opencode.jsonc, opencode-secondary.json, tui.json, zed-settings.json); machine-specific paths use `__HOME__`/`__ENGRAM__` tokens resolved at install time
+- `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, claude-settings.local.json, opencode.jsonc, opencode-secondary.json, tui.json, zed-settings.json); machine-specific paths use `__HOME__`/`__ENGRAM__` tokens resolved at install time
 
 Or just run `./install.sh` (Quick Start) to do all of the above automatically.
 
@@ -833,16 +835,6 @@ File: `~/.claude/settings.json`
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/engram-sync.sh",
-            "statusMessage": "Syncing memory to Engram...",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "if [ -x '/Users/user/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/Users/user/.orca/agent-hooks/claude-hook.sh'; fi"
           }
         ]
@@ -855,16 +847,6 @@ File: `~/.claude/settings.json`
             "type": "command",
             "command": "~/.claude/hooks/auto-sync.sh",
             "statusMessage": "Post-compact memory sync...",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/engram-sync.sh",
-            "statusMessage": "Post-compact Engram sync...",
             "async": true
           }
         ]
@@ -1588,19 +1570,19 @@ All resources must have: Name, Environment, Team, ManagedBy=terraform
 
 ### 5.7 Hook Scripts
 
-The `~/.claude/hooks/` directory holds three scripts, all committed in this repo under `hooks/`:
+The `~/.claude/hooks/` directory holds one script, committed in this repo under `hooks/`:
 
 | Script | Triggered by | What it does |
 |---|---|---|
 | `auto-sync.sh` | Stop, PostCompact (async) | rsync Claude memory/agents/skills/rules/settings → Obsidian vault, then git commit + push |
-| `engram-sync.sh` | Stop, PostCompact (async) | Lock wrapper that runs `engram-sync.py` to mirror Claude memory files → Engram |
-| `engram-sync.py` | called by `engram-sync.sh` | Reconciles each memory file against a manifest and saves/replaces observations in Engram |
 
-Copy them into place and make the shell scripts executable:
+> **Claude-only policy:** the vendored Claude Code setup is deliberately free of Engram/opencode-ecosystem dependencies so it can be shared with a team that uses Claude Code only. The `engram-sync.sh`/`engram-sync.py` hooks that mirror Claude memory into Engram are NOT vendored and their `settings.json` entries are stripped by `scripts/sync-from-live.sh`. A personal machine that also runs the opencode/Zed stack (Section 8) can add them locally.
+
+Copy it into place and make it executable:
 ```bash
 mkdir -p ~/.claude/hooks
-cp hooks/auto-sync.sh hooks/engram-sync.sh hooks/engram-sync.py ~/.claude/hooks/
-chmod +x ~/.claude/hooks/auto-sync.sh ~/.claude/hooks/engram-sync.sh ~/.claude/hooks/engram-sync.py
+cp hooks/auto-sync.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/auto-sync.sh
 ```
 
 #### `auto-sync.sh` (memory → Obsidian)
@@ -1680,44 +1662,9 @@ chmod +x ~/.claude/hooks/auto-sync.sh
 
 > **Linux path note:** The memory path uses `-Users-user` which is derived from the macOS home directory `/Users/user`. On Linux, home is `/home/user`, so the path would be `-home-user`. The auto-sync script uses `$MEMORY_SRC` — update this variable to match your actual path: `$CLAUDE_DIR/projects/$(echo $HOME | tr '/' '-' | sed 's/^-//')/memory`
 
-#### `engram-sync.sh` + `engram-sync.py` (memory → Engram)
+#### `engram-sync` hooks (not vendored)
 
-These two files mirror Claude memory files (`~/.claude/projects/*/memory/*.md`, excluding `MEMORY.md`) into Engram (see Section 8) so the same learnings are recallable via the `mem_*` tools from opencode, Zed, and any other Engram client. They run on the Stop and PostCompact events, alongside `auto-sync.sh`.
-
-The shell wrapper is short — it exists only to serialize concurrent session-ends and call the Python worker. The full contents are in `hooks/engram-sync.sh`:
-
-```bash
-#!/usr/bin/env bash
-# Mirror new/edited Claude memory files into Engram. Async hook on Stop + PostCompact.
-# macOS has no flock; use an atomic mkdir lock so concurrent session-ends don't race.
-LOCK=/tmp/engram-sync.lock
-# Clear a stale lock left by a hard-killed process (older than 60 min), so a
-# crash can never permanently disable syncing.
-if [ -d "$LOCK" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
-  rmdir "$LOCK" 2>/dev/null
-fi
-mkdir "$LOCK" 2>/dev/null || exit 0
-trap 'rmdir "$LOCK" 2>/dev/null' EXIT
-
-python3 "$HOME/.claude/hooks/engram-sync.py" "${1:-sync}" >>"$HOME/.claude/engram-sync.log" 2>&1
-exit 0
-```
-
-The Python worker (`hooks/engram-sync.py`, ~200 lines — referenced rather than pasted here) does the actual reconciliation. Its behavior:
-
-- **Source of truth is the memory files.** State lives in a content-hash manifest at `~/.claude/engram-sync-state.json` (`{abs_path: {hash, obs_id, project, title}}`).
-- **Replace-on-change.** New file → `engram save`; changed file → save the new observation *before* deleting the old one (so a failed save never loses data); unchanged → no-op.
-- **Skips secrets.** Any memory file whose contents match real secret-value patterns (GitHub PATs, AWS access keys, private-key headers, Slack tokens, JWTs, `aws_secret_access_key`) is skipped entirely — nothing secret is ever sent to Engram.
-- **Never mirrors deletions.** Deleting a memory file does not delete its Engram observation — no destructive cascade.
-- **mkdir-based lock.** macOS has no `flock`, so the wrapper uses an atomic `mkdir` lock with a 60-minute stale-lock recovery.
-- **`backfill` mode.** Run `engram-sync.py backfill` for first-time setup or recovery: it adopts already-imported Engram observations into the manifest (matched by exact project + title via `engram export`) so the existing memories are not re-saved as duplicates.
-- **Manifest-loss safety guard.** If the manifest is empty/missing but Engram already holds observations, `sync` aborts and tells you to run `backfill` — preventing a lost manifest from mass-duplicating every memory.
-
-```bash
-chmod +x ~/.claude/hooks/engram-sync.sh ~/.claude/hooks/engram-sync.py
-# First time on a machine that already has memories in Engram:
-~/.claude/hooks/engram-sync.py backfill
-```
+Earlier revisions of this repo also vendored `engram-sync.sh`/`engram-sync.py`, which mirrored Claude memory files into Engram for the opencode/Zed stack. They were removed under the Claude-only policy (see the note at the top of this section): the shared Claude Code setup must not depend on Engram or any non-Claude tooling. A personal machine that wants that bridge can keep the scripts locally in `~/.claude/hooks/` and add the corresponding Stop/PostCompact entries to `settings.json`; `scripts/sync-from-live.sh` will keep them out of the repo automatically.
 
 ---
 
@@ -1744,7 +1691,7 @@ brew list opencode  # → .../Cellar/opencode/<version>/bin/opencode
 
 The oh-my-openagent plugin does **not** need a manual install. opencode installs npm plugins listed in the `plugin` array of `opencode.jsonc` (Section 6.2) **automatically at startup, using Bun**, caching them under `~/.cache/opencode/packages/<name>@<spec>/node_modules/` ([opencode plugins docs](https://opencode.ai/docs/plugins/)). So once `opencode.jsonc` is in place and Bun is installed (Section 3.5), the plugin is fetched on the next `opencode` launch — just start opencode once.
 
-> **Always pin an exact version** (e.g. `"oh-my-openagent@4.15.1"`), never `@latest`: opencode's Bun cache resolves an `@latest` spec once and never re-resolves it, so `@latest` silently pins to whatever was current at first launch. An exact pin makes the loaded version explicit and upgrades deliberate (change the pin, restart opencode, verify with the harness checker). If `@ast-grep/cli`'s postinstall fails during plugin resolution, it is safe to ignore — AST grep degrades gracefully.
+> **Always pin an exact version** (e.g. `"oh-my-openagent@4.16.1"`), never `@latest`: opencode's Bun cache resolves an `@latest` spec once and never re-resolves it, so `@latest` silently pins to whatever was current at first launch. An exact pin makes the loaded version explicit and upgrades deliberate (change the pin, restart opencode, verify with the harness checker). If `@ast-grep/cli`'s postinstall fails during plugin resolution, it is safe to ignore — AST grep degrades gracefully.
 
 ### 6.2 Main Config (`opencode.jsonc`)
 
@@ -1757,12 +1704,27 @@ File: `~/.config/opencode/opencode.jsonc`
   "small_model": "nan/qwen3.6",
   "enabled_providers": ["nan"],
   "lsp": true,
+  // Domain rules shared with Claude Code — single source of truth in ~/.claude/rules/.
+  "instructions": ["~/.claude/rules/*.md"],
   "compaction": {
     "auto": true,
     "prune": true,
     "reserved": 32768
   },
   "permission": {
+    // Path-glob file protection (parity with the Claude Code file-protection hook).
+    // Content-aware guards live in plugins/harness-guards.js.
+    "edit": {
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/.env.example": "allow",
+      "**/*.tfstate": "deny",
+      "**/*.tfvars": "deny",
+      "**/*.pem": "deny",
+      "**/*.key": "deny",
+      "**/id_rsa*": "deny",
+      "**/secrets/**": "deny"
+    },
     "bash": {
       "*": "allow",
       "rm -rf /": "deny",
@@ -1791,12 +1753,12 @@ File: `~/.config/opencode/opencode.jsonc`
     },
     "playwright": {
       "type": "local",
-      "command": ["npx", "@playwright/mcp@0.0.76", "--headless"],
+      "command": ["npx", "@playwright/mcp@0.0.77", "--headless"],
       "enabled": true
     }
   },
   "plugin": [
-    "oh-my-openagent@4.15.1"
+    "oh-my-openagent@4.16.1"
   ],
   "provider": {
     "nan": {
@@ -1894,9 +1856,13 @@ The "council" is a multi-lens adversarial review run entirely on NaN models:
 File: `~/.config/opencode/tui.json`
 ```json
 {
-  "plugin": []
+  "plugin": [
+    "oh-my-openagent@4.16.1"
+  ]
 }
 ```
+
+> The `./tui` subpath is exported by oh-my-openagent since 4.16.x, so the TUI plugin entry is valid now (older guidance said to keep this list empty). Keep the pin in lockstep with the main `plugin` array — one exact version, never two entries, never `@latest`.
 
 File: `~/.opencode/opencode.json` — **must exist and be clean**
 ```json
@@ -1912,7 +1878,7 @@ File: `~/.opencode/opencode.json` — **must exist and be clean**
 
 ```bash
 opencode debug info
-# Expected: plugins: - oh-my-openagent@4.15.1 (one entry only, exact pin)
+# Expected: plugins: - oh-my-openagent@4.16.1 (one entry only, exact pin)
 
 opencode agent list | grep -E "^[A-Za-z].*\(primary|subagent\)"
 # Expected: Sisyphus, Prometheus, Metis, Momus, Atlas, oracle, explore, librarian, ...
@@ -1973,7 +1939,7 @@ node ~/.config/opencode/scripts/check-harness.mjs --json   # machine-readable
 ```
 It is wired in as **Stage 1 of `/smoke`**, so a `/smoke` run validates config invariants before checking liveness.
 
-**Browser / E2E (Playwright MCP)** — `opencode.jsonc` registers the official Playwright MCP (`mcp.playwright`, Section 6.2), giving the agent `browser_navigate / click / snapshot / screenshot` tools. It launches `npx @playwright/mcp@0.0.76 --headless` (auto-installed on first use) and reuses an installed Chromium. For authoring/running Playwright E2E scripts, the `webapp-testing` skill — with its `scripts/with_server.py` server-lifecycle helper (vendored under `zed-skills/webapp-testing/scripts/`) — runs via bash; that path needs the Python `playwright` package and Chromium:
+**Browser / E2E (Playwright MCP)** — `opencode.jsonc` registers the official Playwright MCP (`mcp.playwright`, Section 6.2), giving the agent `browser_navigate / click / snapshot / screenshot` tools. It launches `npx @playwright/mcp@0.0.77 --headless` (auto-installed on first use) and reuses an installed Chromium. For authoring/running Playwright E2E scripts, the `webapp-testing` skill — with its `scripts/with_server.py` server-lifecycle helper (vendored under `zed-skills/webapp-testing/scripts/`) — runs via bash; that path needs the Python `playwright` package and Chromium:
 ```bash
 pip install playwright && python -m playwright install chromium
 ```
@@ -2188,7 +2154,7 @@ brew install gentleman-programming/tap/engram
 
 This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary installs to `/opt/homebrew/bin/engram` on Apple Silicon macOS. The same tap also ships `gentle-ai` (`brew install gentleman-programming/tap/gentle-ai`).
 
-> **Linux note:** these configs assume the macOS Homebrew prefix `/opt/homebrew`, but the engram path is resolved dynamically — `install.sh` sets the Zed `context_servers.engram.command` from `command -v engram`, and `engram-sync.py` resolves it via `shutil.which("engram")` (falling back to the Homebrew path). For a manual install on Linux, just ensure `engram` is on `PATH`.
+> **Linux note:** these configs assume the macOS Homebrew prefix `/opt/homebrew`, but the engram path is resolved dynamically — `install.sh` sets the Zed `context_servers.engram.command` from `command -v engram`. For a manual install on Linux, just ensure `engram` is on `PATH`.
 
 ### 8.3 What it backs
 
@@ -2196,7 +2162,7 @@ This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary ins
 |---|---|---|
 | opencode | `mcp.engram` MCP server (`engram mcp --tools=agent`) | `~/.config/opencode/opencode.jsonc` |
 | Zed | `context_servers.engram` context server | `~/.config/zed/settings.json` |
-| Claude Code | `engram-sync.sh` / `engram-sync.py` hooks mirror Claude memory files into Engram on Stop + PostCompact | `~/.claude/hooks/` (see Section 5.7) |
+| Claude Code | none — the vendored Claude setup is Engram-free by design (Section 5.7 Claude-only policy) | — |
 
 ### 8.4 Shared memory policy (AGENTS.md)
 
@@ -2401,12 +2367,11 @@ Copy this list and check off each item:
 - [ ] `~/.claude/skills/` populated
 - [ ] `~/.claude/rules/` created
 - [ ] `~/.claude/hooks/auto-sync.sh` created and executable
-- [ ] `~/.claude/hooks/engram-sync.sh` + `engram-sync.py` created and executable
+- [ ] `~/.claude/settings.local.json` created (permission allowlist)
 
-**Engram**
+**Engram** (opencode/Zed only — the Claude Code setup is Engram-free)
 - [ ] Installed (`engram --version` → 1.16.x)
 - [ ] DB exists at `~/.engram/engram.db`
-- [ ] First-time backfill run if Engram already had memories (`~/.claude/hooks/engram-sync.py backfill`)
 
 **Obsidian Vault**
 - [ ] `git clone git@github.com:yosoyvilla/obsidian-vault.git ~/Documents/obsidian-vault`
@@ -2423,7 +2388,7 @@ Copy this list and check off each item:
 - [ ] `~/.config/opencode/commands/` populated (council, verify, smoke)
 - [ ] `~/.config/opencode/tui.json` created (empty plugins)
 - [ ] `~/.opencode/opencode.json` created (empty plugins)
-- [ ] Verification: `opencode debug info` shows only `oh-my-openagent@4.15.1` (exact pin)
+- [ ] Verification: `opencode debug info` shows only `oh-my-openagent@4.16.1` (exact pin)
 
 **Zed**
 - [ ] Installed
@@ -2519,3 +2484,32 @@ sudo apt install -y rsync
 # Fedora:
 sudo dnf install -y rsync
 ```
+
+---
+
+## 15. Keeping the Repo in Sync
+
+This repo is a **sanitized mirror** of the live workstation config. To refresh it from the live machine, run:
+
+```bash
+scripts/sync-from-live.sh --dry-run   # preview incoming changes
+scripts/sync-from-live.sh             # stage, sanitize, verify, mirror into the working tree
+git diff                              # review EVERY change before committing
+```
+
+What it does:
+
+1. Stages the live config (Claude Code agents/skills/hooks/rules/CLAUDE.md/settings, opencode agents/commands/plugins/scripts/configs, Zed settings + shared AGENTS.md, `~/.agents/skills`) into a temp dir. The live side is never modified.
+2. Templatizes machine paths (`$HOME` → `__HOME__`, engram binary → `__ENGRAM__`) before sanitizing.
+3. Applies the sanitize map, then enforces hard gates: zero sanitize-map tokens in content or file names, zero secret-shaped strings, AGENTS.md byte-parity between the opencode and Zed copies. Any failure aborts with the repo untouched and the staging dir kept for inspection.
+4. Mirrors the staging tree into the repo working tree. Protected files (`agents/airbyte.md`, `skills/scalr-deploy/SKILL.md`) keep the repo version — they carry intentional `REQUIRES SECRET` annotations absent from live.
+5. Leaves committing to you. Review the diff, then commit with a single-line message.
+
+The sanitize map lives at `~/.config/setup-sync/sanitize-map.txt` and is deliberately **not** in this repo (committing it would reveal the names it scrubs). Format: `scripts/sanitize-map.example`. On a new machine, recreate the map from the private Obsidian vault notes before your first sync from that machine.
+
+Rules that keep the repo consistent:
+
+- Excluded from sync: memory, session data, logs, caches, backups (`*.bak*`), `node_modules`, `__pycache__`, opencode `package.json`/`package-lock.json`.
+- Claude-only policy: `engram-sync.*` hooks are excluded and their `settings.json` entries stripped — the vendored Claude Code setup must work for teammates who only use Claude Code.
+- If `config/opencode.jsonc` or `config/zed-settings.json` changes, update the inline copies in this README as well (the script prints a reminder).
+- Never hand-copy live files into the repo — always go through the script so sanitization and gates run.

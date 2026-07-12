@@ -9,7 +9,23 @@
     "prune": true,
     "reserved": 32768
   },
+  // Domain rules shared with Claude Code — single source of truth in ~/.claude/rules/.
+  "instructions": ["__HOME__/.claude/rules/*.md"],
   "permission": {
+    // Path-glob file protection (parity with the Claude Code file-protection hook).
+    // Content-aware guards (secret values in docs, bash redirects into protected
+    // files) live in plugins/harness-guards.js — globs cannot express those.
+    "edit": {
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/.env.example": "allow",
+      "**/*.tfstate": "deny",
+      "**/*.tfvars": "deny",
+      "**/*.pem": "deny",
+      "**/*.key": "deny",
+      "**/id_rsa*": "deny",
+      "**/secrets/**": "deny"
+    },
     "bash": {
       "*": "allow",
       "rm -rf /": "deny",
@@ -38,12 +54,12 @@
     },
     "playwright": {
       "type": "local",
-      "command": ["npx", "@playwright/mcp@0.0.76", "--headless"],
+      "command": ["npx", "@playwright/mcp@0.0.77", "--headless"],
       "enabled": true
     }
   },
   "plugin": [
-    "oh-my-openagent@4.15.1"
+    "oh-my-openagent@4.16.1"
   ],
   "provider": {
     "nan": {

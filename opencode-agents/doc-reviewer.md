@@ -40,7 +40,7 @@ Catch anything that renders wrong or shows characters that should not be visible
 - **Structure defects**: skipped heading levels, duplicate headings, orphaned sections, dead internal links, code blocks missing a language, inconsistent terminology for the same concept.
 - Use Bash + grep to scan local files for these (e.g. `grep -nP '&(amp|lt|gt|#39|quot|nbsp);' file`, `grep -nP '[^\x00-\x7F]' file` to surface non-ASCII, `grep -n ' $' file` for trailing whitespace). For Confluence, fetch the page (Atlassian MCP via ToolSearch) and inspect both rendered and source.
 
-## Guidelines (Varsity)
+## Guidelines (project-a)
 - **No emojis** in documentation.
 - **Company-wide framing**: remove vendor-specific qualifiers that add no value (e.g. "(for New Relic users)" in a title) — write for everyone.
 - **No PII or secrets** in docs: no emails, credentials, tokens, license keys, or sensitive role/account identifiers.

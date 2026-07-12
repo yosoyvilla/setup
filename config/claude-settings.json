@@ -7,7 +7,7 @@
     "commit": "",
     "pr": ""
   },
-  "model": "opus[1m]",
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "Stop": [
       {
@@ -16,16 +16,6 @@
             "type": "command",
             "command": "~/.claude/hooks/auto-sync.sh",
             "statusMessage": "Syncing memory to Obsidian...",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/engram-sync.sh",
-            "statusMessage": "Syncing memory to Engram...",
             "async": true
           }
         ]
@@ -46,16 +36,6 @@
             "type": "command",
             "command": "~/.claude/hooks/auto-sync.sh",
             "statusMessage": "Post-compact memory sync...",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/engram-sync.sh",
-            "statusMessage": "Post-compact Engram sync...",
             "async": true
           }
         ]

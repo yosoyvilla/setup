@@ -30,6 +30,7 @@
 - Immutability by default. Mutate only when necessary.
 - Tests: Unit for logic, integration for boundaries, skip trivial code.
 - Changes must be reviewable in under 15 minutes. Split large changes.
+- Pre-commit review, workflow fixes, and fan-out trial runs: follow `~/.claude/rules/agent-workflows.md`.
 
 ## Agent Routing (Smart)
 Route tasks to the right tier. Not everything needs an agent.
@@ -91,7 +92,7 @@ For tasks spanning multiple sessions (large migrations, multi-PR features), crea
 Projects live in `~/Documents/` with per-project `.claude/CLAUDE.md` files:
 - `project-b/` - Real estate portals (portal-1, portal-2, portal-3, portal-4)
 - `project-c/` - E-commerce (Shopify, warehousing, infra)
-- `project-d/` - FinTech/payments
+- `project-d/` - FinTech/payments (project-d)
 - `project-a/` - EdTech (EKS, Terraform, large infra)
 - `Personal/` - Side projects (Crewgent, etc.)
 
