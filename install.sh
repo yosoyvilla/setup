@@ -4,8 +4,9 @@
 #
 # Supports: macOS (Homebrew) and Debian/Ubuntu (apt).
 # Idempotent: safe to re-run. Unattended: never prompts, never writes secrets.
-# Installs the full stack (tools + Claude Code + opencode + Zed + Engram +
-# Playwright) and places every vendored config/agent/skill/rule/hook.
+# Installs the full stack (tools + Claude Code + opencode + pi/gentle-pi + Codex
+# CLI + Herdr + Engram + Playwright) and places every vendored config/agent/
+# skill/rule/hook. Zed was retired from this setup on 2026-09-21.
 # Manual steps it cannot automate (API keys, auths, GUI) are printed as a TODO
 # list at the end.
 #
@@ -143,7 +144,7 @@ else ok "oh-my-zsh present"; fi
 [ "$SHELL" = "$(command -v zsh)" ] || todo "Set zsh as default shell: chsh -s \"\$(command -v zsh)\"  (log out/in after)"
 
 # ════════════════════════════════════════════════════════════════════
-# 6. AI tools: Claude Code, opencode, Zed, Engram
+# 6. AI tools: Claude Code, opencode, pi, Codex CLI, Herdr, Engram
 # ════════════════════════════════════════════════════════════════════
 section "AI tools"
 # Claude Code — CLI install + all ~/.claude assets live in install-claude.sh
@@ -155,11 +156,23 @@ if ! have opencode; then
   if [ "$OS" = "macos" ]; then brew install anomalyco/tap/opencode >/dev/null 2>&1 && ok "opencode" || err "opencode";
   else curl -fsSL https://opencode.ai/install | bash >/dev/null 2>&1 && ok "opencode" || err "opencode"; fi
 else ok "opencode present"; fi
-# Zed
-if ! have zed; then
-  if [ "$OS" = "macos" ]; then brew install --cask zed >/dev/null 2>&1 && ok "Zed" || warn "Zed (cask)";
-  else curl -f https://zed.dev/install.sh | sh >/dev/null 2>&1 && ok "Zed" || warn "Zed"; fi
-else ok "Zed present"; fi
+# pi coding agent (npm; --ignore-scripts per pi's own install docs)
+if ! have pi; then
+  npm install -g --ignore-scripts @earendil-works/pi-coding-agent >/dev/null 2>&1 && ok "pi" || err "pi (npm install -g @earendil-works/pi-coding-agent)"
+else ok "pi present ($(pi --version 2>/dev/null))"; fi
+# Codex CLI (npm)
+if ! have codex; then
+  npm install -g @openai/codex >/dev/null 2>&1 && ok "codex" || warn "codex (npm install -g @openai/codex)"
+else ok "codex present"; fi
+# Herdr (official installer; package-manager installs update through that manager instead)
+if ! have herdr; then
+  curl -fsSL https://herdr.dev/install.sh | sh >/dev/null 2>&1 && ok "herdr" || warn "herdr (https://herdr.dev/docs/install/)"
+else ok "herdr present ($(herdr --version 2>/dev/null))"; fi
+# gentle-ai (configurator used only for pi here; the same tap ships Engram)
+if ! have gentle-ai; then
+  if have brew; then brew install gentleman-programming/tap/gentle-ai >/dev/null 2>&1 && ok "gentle-ai" || warn "gentle-ai";
+  else warn "gentle-ai: no Homebrew here; the pi section prints the manual step"; fi
+else ok "gentle-ai present"; fi
 # Engram
 if ! have engram; then
   if [ "$OS" = "macos" ]; then brew install gentleman-programming/tap/engram >/dev/null 2>&1 && ok "Engram" || warn "Engram";
@@ -172,8 +185,8 @@ else ok "Engram present"; fi
 # ════════════════════════════════════════════════════════════════════
 section "Placing configs and assets"
 mkdir -p "$HOME/.config/opencode/agents" "$HOME/.config/opencode/commands" "$HOME/.config/opencode/scripts" \
-         "$HOME/.config/opencode/plugins" "$HOME/.config/zed" "$HOME/.agents/skills"
-ENGRAM_BIN="$(command -v engram || echo engram)"
+         "$HOME/.config/opencode/plugins" "$HOME/.agents/skills" "$HOME/.pi/agent/extensions" "$HOME/.pi/agent/scripts" \
+         "$HOME/.pi/agent/skills" "$HOME/.pi/gentle-ai" "$HOME/.codex"
 
 # Claude Code assets already placed by install-claude.sh (AI tools section)
 
@@ -192,11 +205,8 @@ if ls "$REPO_DIR"/opencode-plugins/*.js >/dev/null 2>&1; then
   cp "$REPO_DIR"/opencode-plugins/*.js "$HOME/.config/opencode/plugins/" && ok "opencode plugins (harness-guards)"
 fi
 
-# Zed (AGENTS.md byte-identical to opencode; engram path resolved for this machine)
-cp "$REPO_DIR/AGENTS.md" "$HOME/.config/zed/AGENTS.md" && ok "Zed AGENTS.md (byte-identical)"
-backup "$HOME/.config/zed/settings.json" "$REPO_DIR/config/zed-settings.json"
-sed "s#__ENGRAM__#$ENGRAM_BIN#g" "$REPO_DIR/config/zed-settings.json" > "$HOME/.config/zed/settings.json" && ok "Zed settings.json (engram → $ENGRAM_BIN)"
-cp -R "$REPO_DIR"/zed-skills/* "$HOME/.agents/skills/" && ok "zed-skills → ~/.agents/skills (incl. webapp-testing/scripts)"
+# Shared skills dir (~/.agents/skills): read by opencode, pi and the Claude Code symlinks
+cp -R "$REPO_DIR"/agents-skills/* "$HOME/.agents/skills/" && ok "agents-skills → ~/.agents/skills (incl. webapp-testing/scripts)"
 # webapp-testing must be a SYMLINK to the Claude Code copy (single source of
 # truth; the harness checker enforces this topology)
 if [ -f "$HOME/.claude/skills/webapp-testing/SKILL.md" ]; then
@@ -204,6 +214,83 @@ if [ -f "$HOME/.claude/skills/webapp-testing/SKILL.md" ]; then
   rm -rf "$HOME/.agents/skills/webapp-testing/scripts"
   ln -s "$HOME/.claude/skills/webapp-testing/scripts" "$HOME/.agents/skills/webapp-testing/scripts" 2>/dev/null
   ok "webapp-testing symlinked → ~/.claude/skills copy"
+fi
+
+# ── pi + gentle-pi ────────────────────────────────────────────────
+# Policy mirrors opencode: NaN default at thinking low, Claude only on gentle-pi's
+# review lenses (8k cap), harness-guards extension because pi has no permission layer.
+# Order matters: gentle-pi install + `gentle-ai sync` first (they edit settings.json,
+# mcp.json and skills), then the vendored files are placed so they are authoritative.
+if have pi; then
+  if ! [ -d "$HOME/.pi/agent/npm/node_modules/gentle-pi" ]; then
+    (cd "$HOME" && pi install npm:gentle-pi </dev/null >/dev/null 2>&1) && ok "gentle-pi package" || warn "gentle-pi (run: pi install npm:gentle-pi)"
+  else ok "gentle-pi package present"; fi
+  if have gentle-ai; then
+    if (cd "$HOME" && gentle-ai sync --agents pi </dev/null >/dev/null 2>&1); then
+      ok "gentle-ai sync (pi only)"
+      # gentle-ai writes its SDD skills into the SHARED ~/.agents/skills (opencode loads that dir too).
+      # Every run: replace pi's copy with the fresh one and remove the shared source (list: pi/gentle-skills.txt).
+      moved=0
+      while read -r skill; do
+        [ -n "$skill" ] && [ -d "$HOME/.agents/skills/$skill" ] || continue
+        rm -rf "$HOME/.pi/agent/skills/$skill"
+        mv "$HOME/.agents/skills/$skill" "$HOME/.pi/agent/skills/" && moved=$((moved + 1))
+      done < "$REPO_DIR/pi/gentle-skills.txt"
+      ok "gentle skills quarantined under ~/.pi/agent/skills ($moved moved)"
+    else
+      warn "gentle-ai sync --agents pi failed — skills left untouched; run it manually, then move the generated skills out of ~/.agents/skills"
+    fi
+  else
+    todo "gentle-ai missing: install it (brew tap gentleman-programming/tap, or the Linux release from github.com/Gentleman-Programming/gentle-ai), then run: gentle-ai sync --agents pi"
+  fi
+  for f in models.json settings.json AGENTS.md mcp.json; do
+    backup "$HOME/.pi/agent/$f" "$REPO_DIR/pi/$f"
+    sed "s#__HOME__#$HOME#g" "$REPO_DIR/pi/$f" > "$HOME/.pi/agent/$f" && ok "pi $f"
+  done
+  cp "$REPO_DIR/pi/gentle-ai-models.json" "$HOME/.pi/gentle-ai/models.json" && ok "gentle-pi per-agent routing"
+  cp "$REPO_DIR"/pi/extensions/*.ts "$HOME/.pi/agent/extensions/" && ok "pi extensions (harness-guards)"
+  cp "$REPO_DIR"/pi/scripts/*.mjs "$HOME/.pi/agent/scripts/" && ok "pi scripts (check-pi-harness + guard tests)"
+  # Skills pi should see but opencode should not: the herdr skill (dagr-producer is a shared-dir skill already)
+  [ -d "$HOME/.claude/skills/herdr" ] && { mkdir -p "$HOME/.pi/agent/skills/herdr"; cp "$HOME/.claude/skills/herdr/SKILL.md" "$HOME/.pi/agent/skills/herdr/"; }
+  todo "pi: store the Anthropic key with /login (API key) inside pi, or write ~/.pi/agent/auth.json (mode 600) — never in models.json"
+else warn "pi not installed — pi configs not placed"; fi
+
+# ── Codex CLI ──────────────────────────────────────────────────────
+if [ -d "$HOME/.codex" ]; then
+  backup "$HOME/.codex/AGENTS.md" "$REPO_DIR/codex/AGENTS.md"
+  cp "$REPO_DIR/codex/AGENTS.md" "$HOME/.codex/AGENTS.md" && ok "codex AGENTS.md"
+  if [ ! -f "$HOME/.codex/config.toml" ]; then
+    sed "s#__HOME__#$HOME#g" "$REPO_DIR/codex/config.toml" > "$HOME/.codex/config.toml" && ok "codex config.toml (curated policy; codex adds marketplaces/projects itself)"
+  else ok "codex config.toml present — deliberately not overwritten: Codex writes marketplace, trust and desktop state into it; apply codex/config.toml changes by hand (known non-converging step)"; fi
+  backup "$HOME/.codex/hooks.json" "$REPO_DIR/codex/hooks.json"
+  sed "s#__HOME__#$HOME#g" "$REPO_DIR/codex/hooks.json" > "$HOME/.codex/hooks.json" && ok "codex hooks.json (Herdr re-adds its SessionStart entry below)"
+  todo "Codex: run 'codex login' (ChatGPT/OpenAI account); plugins in config.toml install on first launch"
+fi
+
+# ── Herdr: plugins + agent integrations (idempotent; each install checks its own state) ──
+if have herdr; then
+  if [ -f "$REPO_DIR/herdr/plugins.txt" ]; then
+    while IFS=$'\t' read -r src commit plugin_id state _comment; do
+      case "$src" in ''|'#'*) continue;; esac
+      if herdr plugin install --ref "$commit" "$src" --yes </dev/null >/dev/null 2>&1; then ok "herdr plugin $src@${commit:0:8}"
+      else warn "herdr plugin $src (run: herdr plugin install --ref $commit $src)"; fi
+      if [ "$state" = "disabled" ]; then
+        if herdr plugin disable "$plugin_id" >/dev/null 2>&1; then ok "herdr plugin $plugin_id disabled (as on the source machine)"
+        else warn "herdr plugin disable $plugin_id"; fi
+      fi
+    done < "$REPO_DIR/herdr/plugins.txt"
+  fi
+  if [ -f "$REPO_DIR/herdr/integrations.txt" ]; then
+    while read -r integ; do
+      [ -n "$integ" ] || continue
+      herdr integration install "$integ" </dev/null >/dev/null 2>&1 && ok "herdr integration $integ" || warn "herdr integration $integ"
+    done < "$REPO_DIR/herdr/integrations.txt"
+  fi
+  # dagr binary on PATH for the dagr-producer skill (`dagr check`)
+  for cand in "$HOME"/.config/herdr/plugins/github/herdr-dagr-*/bin/dagr; do
+    if [ -x "$cand" ]; then ln -sfn "$cand" "$HOME/.local/bin/dagr" && ok "dagr → ~/.local/bin/dagr"; break; fi
+  done
+  todo "Herdr: run 'herdr' once to start the server; integrations report state only inside Herdr panes"
 fi
 
 # ════════════════════════════════════════════════════════════════════
@@ -223,7 +310,10 @@ ok "Playwright MCP auto-installs via opencode on first launch (npx @playwright/m
 # ════════════════════════════════════════════════════════════════════
 section "Validating harness"
 if have node; then
-  node "$HOME/.config/opencode/scripts/check-harness.mjs" >/dev/null 2>&1 && ok "harness checker passed" || warn "harness checker reported issues — run: node ~/.config/opencode/scripts/check-harness.mjs"
+  node "$HOME/.config/opencode/scripts/check-harness.mjs" >/dev/null 2>&1 && ok "opencode harness checker passed" || warn "opencode harness checker reported issues — run: node ~/.config/opencode/scripts/check-harness.mjs"
+  if have pi && [ -f "$HOME/.pi/agent/scripts/check-pi-harness.mjs" ]; then
+    node "$HOME/.pi/agent/scripts/check-pi-harness.mjs" >/dev/null 2>&1 && ok "pi harness checker passed" || err "pi harness checker failed — run: node ~/.pi/agent/scripts/check-pi-harness.mjs"
+  fi
 fi
 
 # ── shell env reminders ───────────────────────────────────────────
@@ -235,8 +325,7 @@ grep -q 'KREW_ROOT' ~/.zshrc 2>/dev/null || echo 'export PATH="${KREW_ROOT:-$HOM
 # Manual TODO (cannot be automated)
 # ════════════════════════════════════════════════════════════════════
 todo "Export API keys in ~/.zshrc:  export NAN_API_KEY=\"sk-...\"   export NEW_RELIC_API_KEY=\"NRAK-...\""
-todo "Zed edit-prediction key (GUI-launched Zed): launchctl setenv ZED_OPEN_AI_COMPATIBLE_EDIT_PREDICTION_API_KEY \"\$NAN_API_KEY\"  (macOS) — see README §7"
-todo "Set the NaN API key in Zed: Cmd/Ctrl+, → AI / Language Models → nan provider → API key"
+todo "Anthropic key (pay-as-you-go review seats): ~/.local/share/opencode/auth.json for opencode and ~/.pi/agent/auth.json for pi, both mode 600 — never in a config file"
 todo "Authenticate: gh auth login ;  aws configure (or awsume) ;  gcloud auth login"
 todo "Launch opencode once so it auto-installs the oh-my-openagent plugin (needs NAN_API_KEY set)"
 todo "Claude Code manual steps: see the install-claude.sh TODO list printed above (login, plugin trust prompts, optional vault clone)"

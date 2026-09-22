@@ -5,7 +5,7 @@
 # Installs the Claude Code CLI and places every vendored Claude asset:
 # CLAUDE.md, settings.json + settings.local.json, agents, skills (folders with
 # support scripts), rules, and the auto-sync hook. Nothing else: this script
-# never touches ~/.config/opencode, ~/.opencode, ~/.config/zed, ~/.agents or
+# never touches ~/.config/opencode, ~/.opencode, ~/.pi, ~/.codex, ~/.agents or
 # ~/.engram, and installs no other tooling. Teammates who use Claude Code
 # without the rest of the stack run THIS script instead of install.sh
 # (install.sh delegates its Claude section here, so the logic lives once).

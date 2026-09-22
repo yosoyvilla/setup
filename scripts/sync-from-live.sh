@@ -2,15 +2,18 @@
 #
 # sync-from-live.sh — sanitized live -> repo sync for this setup repo.
 #
-# Stages the live workstation harness config (Claude Code, opencode, Zed,
-# ~/.agents/skills) into a temp dir, templatizes machine paths
-# (__HOME__ / __ENGRAM__), applies the client-name sanitize map, then verifies
-# hard gates before mirroring the staging tree into this repo's working tree:
+# Stages the live workstation harness config (Claude Code, opencode, pi +
+# gentle-pi, Codex CLI, Herdr manifests, ~/.agents/skills) into a temp dir,
+# templatizes machine paths (__HOME__), applies the client-name sanitize map,
+# then verifies hard gates before mirroring the staging tree into this repo's
+# working tree:
 #   1. no sanitize-map token survives in file CONTENT or file NAMES
 #   2. no secret-shaped string (token prefixes, private keys, JWTs, live key values)
-#   3. AGENTS.md byte-parity between the opencode and Zed copies
 # Any gate failure aborts with the staging dir preserved for inspection and the
 # repo untouched. The script NEVER commits and NEVER writes to live config.
+# Files that tools install themselves (Herdr integration hooks/plugins, gentle-ai
+# synced skills) are excluded: install.sh re-creates them with the tool's own
+# installer so the repo never carries a stale copy.
 #
 # The sanitize map is deliberately NOT in this repo (committing it would reveal
 # the very names it scrubs). It lives at ~/.config/setup-sync/sanitize-map.txt:
@@ -38,7 +41,17 @@ DRY_RUN=0
 PROTECTED="agents/airbyte.md skills/scalr-deploy/SKILL.md"
 
 # Repo dirs fully mirrored from staging (rsync --delete).
-MANAGED_DIRS="agents skills hooks rules zed-skills opencode-agents opencode-commands opencode-plugins opencode-scripts"
+MANAGED_DIRS="agents skills hooks rules agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts pi codex herdr"
+# Managed dirs that may legitimately be absent on a machine without that tool (skipped, never deleted).
+OPTIONAL_DIRS="pi codex herdr"
+is_optional(){ case " $OPTIONAL_DIRS " in *" $1 "*) return 0;; *) return 1;; esac; }
+# Skills that `gentle-ai sync --agents pi` generates into the SHARED ~/.agents/skills. They belong to pi only:
+# excluded from agents-skills staging here and quarantined into ~/.pi/agent/skills by install.sh (which reads
+# pi/gentle-skills.txt, written below, so the list lives in one place).
+GENTLE_SKILLS="_shared chained-pr cognitive-doc-design go-testing judgment-day sdd-apply sdd-archive sdd-design sdd-explore sdd-init sdd-onboard sdd-propose sdd-research sdd-spec sdd-tasks sdd-verify skill-improver skill-registry work-unit-commits"
+# An optional tool's tree is staged all-or-nothing: `require_all <dir> <path>...` dies when the tool is present
+# but any expected file is missing, so a partial tree can never reach `rsync --delete` and remove committed files.
+require_all(){ local d="$1"; shift; local f; for f in "$@"; do [ -e "$STAGE/$d/$f" ] || die "$d/: expected $f was not staged (tool present but config incomplete) — refusing to mirror a partial tree"; done; }
 
 c_red=$'\033[0;31m'; c_green=$'\033[0;32m'; c_yellow=$'\033[0;33m'; c_blue=$'\033[0;34m'; c_off=$'\033[0m'
 section(){ printf "\n%s==> %s%s\n" "$c_blue" "$1" "$c_off"; }
@@ -96,14 +109,122 @@ stage_file(){ # src dst
 # that uses Claude Code only — the engram-sync hooks (Engram/opencode-ecosystem
 # memory bridge) are excluded from vendoring. The live machine keeps them.
 stage_dir "$LIVE_HOME/.claude/agents"            agents
-stage_dir "$LIVE_HOME/.claude/skills"            skills
-stage_dir "$LIVE_HOME/.claude/hooks"             hooks --exclude 'engram-sync.*'
+# `synced/` is Claude Code's per-account skill cache (org ids in the path); `terminal-browser` is an absolute
+# symlink into that tool's own install. Neither is ours to vendor.
+stage_dir "$LIVE_HOME/.claude/skills"            skills --exclude 'synced/' --exclude 'terminal-browser'
+stage_dir "$LIVE_HOME/.claude/hooks"             hooks --exclude 'engram-sync.*' --exclude 'herdr-*'
 stage_dir "$LIVE_HOME/.claude/rules"             rules
-stage_dir "$LIVE_HOME/.agents/skills"            zed-skills -L   # resolve symlinks to real files
+GENTLE_EXCLUDES=(); for g in $GENTLE_SKILLS; do GENTLE_EXCLUDES+=(--exclude "$g/"); done
+stage_dir "$LIVE_HOME/.agents/skills"            agents-skills -L "${GENTLE_EXCLUDES[@]}"   # shared skills dir; resolve symlinks; no gentle-generated skills
 stage_dir "$LIVE_HOME/.config/opencode/agents"   opencode-agents
 stage_dir "$LIVE_HOME/.config/opencode/commands" opencode-commands
-stage_dir "$LIVE_HOME/.config/opencode/plugins"  opencode-plugins
+stage_dir "$LIVE_HOME/.config/opencode/plugins"  opencode-plugins --exclude 'herdr-*'
 stage_dir "$LIVE_HOME/.config/opencode/scripts"  opencode-scripts
+
+# pi coding agent + gentle-pi (auth.json NEVER staged; gentle-ai synced skills and
+# Herdr's extension are re-created by their installers, so they are excluded)
+if [ -d "$LIVE_HOME/.pi/agent" ]; then
+  stage_dir  "$LIVE_HOME/.pi/agent/extensions"      pi/extensions --exclude 'herdr-*'
+  stage_dir  "$LIVE_HOME/.pi/agent/scripts"         pi/scripts
+  stage_file "$LIVE_HOME/.pi/agent/models.json"     pi/models.json
+  stage_file "$LIVE_HOME/.pi/agent/settings.json"   pi/settings.json
+  stage_file "$LIVE_HOME/.pi/agent/AGENTS.md"       pi/AGENTS.md
+  stage_file "$LIVE_HOME/.pi/agent/mcp.json"        pi/mcp.json
+  stage_file "$LIVE_HOME/.pi/gentle-ai/models.json" pi/gentle-ai-models.json
+  mkdir -p "$STAGE/pi"; printf '%s\n' $GENTLE_SKILLS > "$STAGE/pi/gentle-skills.txt"
+  require_all pi extensions/harness-guards.ts scripts/check-pi-harness.mjs scripts/test-pi-guards.mjs models.json settings.json AGENTS.md mcp.json gentle-ai-models.json gentle-skills.txt
+  [ -f "$STAGE/pi/models.json" ] && grep -q 'auth\.json' "$STAGE/pi/models.json" && die "pi/models.json references auth.json — keys must never be inlined"
+else
+  warn "pi not installed here (~/.pi/agent missing) — pi/ left as committed"
+fi
+
+# Codex CLI: AGENTS.md and hooks verbatim; config.toml as a CURATED portable subset
+# (model, reasoning effort, plugins, features, shell env policy, memories). The live
+# file also holds marketplace caches, MCP servers bound to a desktop app, per-machine
+# project trust entries and desktop UI state, none of which belong on another machine.
+if [ -d "$LIVE_HOME/.codex" ]; then
+stage_file "$LIVE_HOME/.codex/AGENTS.md"  codex/AGENTS.md
+stage_file "$LIVE_HOME/.codex/hooks.json" codex/hooks.json
+if [ -f "$LIVE_HOME/.codex/config.toml" ]; then
+  command -v python3 >/dev/null 2>&1 || die "python3 required to curate codex/config.toml"
+  mkdir -p "$STAGE/codex"
+  python3 - "$LIVE_HOME/.codex/config.toml" "$STAGE/codex/config.toml" <<'PY' || die "failed to curate codex/config.toml"
+import sys, tomllib
+src, dst = sys.argv[1], sys.argv[2]
+d = tomllib.load(open(src, "rb"))
+import json
+def q(v):
+    if isinstance(v, bool): return "true" if v else "false"
+    if isinstance(v, (int, float)): return str(v)
+    if isinstance(v, str): return json.dumps(v, ensure_ascii=False)  # valid TOML basic string
+    if isinstance(v, list) and all(isinstance(x, (bool, int, float, str)) for x in v): return "[" + ", ".join(q(x) for x in v) + "]"
+    raise SystemExit(f"codex/config.toml: unsupported value type {type(v).__name__} for {v!r}")
+# Only these environment keys are portable policy; anything else under shell_environment_policy.set stays local.
+ENV_ALLOW = {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"}
+import re as _re
+SECRETISH = _re.compile(r"key|token|secret|password|credential|passwd", _re.I)
+out = ["# Curated by scripts/sync-from-live.sh from ~/.codex/config.toml: portable policy only.",
+       "# Marketplaces, MCP servers, project trust entries and desktop state are machine-local and not vendored.", ""]
+for k in ("model", "model_reasoning_effort"):
+    if k in d: out.append(f"{k} = {q(d[k])}")
+out.append("")
+for name in sorted(d.get("plugins", {})):
+    out += [f'[plugins."{name}"]', f"enabled = {q(d['plugins'][name].get('enabled', True))}", ""]
+for sect in ("features", "memories"):
+    if sect in d:
+        out.append(f"[{sect}]"); out += [f"{k} = {q(v)}" for k, v in d[sect].items()]; out.append("")
+sep = d.get("shell_environment_policy", {})
+if sep:
+    out.append("[shell_environment_policy]")
+    for k, v in sep.items():
+        if not isinstance(v, dict): out.append(f"{k} = {q(v)}")
+    out.append("")
+    if isinstance(sep.get("set"), dict):
+        out.append("[shell_environment_policy.set]")
+        for k, v in sep["set"].items():
+            if k not in ENV_ALLOW:
+                if SECRETISH.search(k): raise SystemExit(f"codex/config.toml: refusing to vendor env key {k} (secret-shaped name); add to ENV_ALLOW only if it is not a credential")
+                continue  # machine-local plumbing (desktop app, runtimes)
+            out.append(f"{k} = {q(v)}")
+        out.append("")
+open(dst, "w").write("\n".join(out).rstrip() + "\n")
+PY
+  ok "codex/config.toml (curated)"
+fi
+require_all codex AGENTS.md hooks.json config.toml
+else
+  warn "codex not configured here (~/.codex missing) — codex/ left as committed"
+fi
+
+# Herdr: manifests derived from live state (the plugin store and integration status),
+# consumed by install.sh via `herdr plugin install` / `herdr integration install`.
+if command -v herdr >/dev/null 2>&1; then
+  mkdir -p "$STAGE/herdr"
+  # Columns: owner/repo[/subdir]  resolved_commit  plugin_id  enabled|disabled  # name version
+  # A machine with Herdr but no plugin store yields a header-only manifest (valid: zero plugins).
+  python3 - "$LIVE_HOME/.config/herdr/plugins.json" "$STAGE/herdr/plugins.txt" <<'PY' || die "failed to derive herdr/plugins.txt"
+import json, os, sys
+rows = []
+if os.path.exists(sys.argv[1]):
+    for p in json.load(open(sys.argv[1])):
+        src = p.get("source") or {}
+        if src.get("kind") != "github":
+            raise SystemExit(f"plugin {p.get('plugin_id')} has source kind {src.get('kind')!r}; only github sources can be restored by install.sh — unlink it or extend the generator")
+        path = f"{src['owner']}/{src['repo']}" + (f"/{src['subdir'].strip('/')}" if src.get("subdir") else "")
+        commit, pid = src.get("resolved_commit") or "", p.get("plugin_id") or ""
+        if not commit or not pid: raise SystemExit(f"plugin {path}: missing resolved_commit or plugin_id; refusing to write an unpinned row")
+        rows.append(f"{path}\t{commit}\t{pid}\t{'enabled' if p.get('enabled', True) else 'disabled'}\t# {p.get('name')} {p.get('version', '')}".rstrip())
+open(sys.argv[2], "w").write("# Herdr plugins on the live machine. Tab-separated: owner/repo[/subdir], pinned commit, plugin_id, enabled|disabled, comment.\n"
+                             "# install.sh: herdr plugin install --ref <commit> <source> --yes, then herdr plugin disable <plugin_id> for disabled rows.\n" + "".join(r + "\n" for r in sorted(rows)))
+PY
+  # Fail loudly if the status command fails; an empty list is legitimate only when herdr reports zero current integrations.
+  status_out="$(herdr integration status 2>"$SCAN_ERR")" || die "herdr integration status failed: $(cat "$SCAN_ERR")"
+  printf '%s\n' "$status_out" | awk -F: '/: current/ {print $1}' | sort > "$STAGE/herdr/integrations.txt"
+  require_all herdr plugins.txt integrations.txt
+  ok "herdr/ (plugins.txt, integrations.txt: $(wc -l < "$STAGE/herdr/integrations.txt" | tr -d ' ') current)"
+else
+  warn "herdr not installed here — herdr/ left as committed"
+fi
 
 stage_file "$LIVE_HOME/.claude/CLAUDE.md"                     config/CLAUDE.md
 stage_file "$LIVE_HOME/.claude/settings.json"                 config/claude-settings.json
@@ -111,13 +232,12 @@ stage_file "$LIVE_HOME/.claude/settings.local.json"           config/claude-sett
 stage_file "$LIVE_HOME/.config/opencode/opencode.jsonc"       config/opencode.jsonc
 stage_file "$LIVE_HOME/.config/opencode/tui.json"             config/tui.json
 stage_file "$LIVE_HOME/.opencode/opencode.json"               config/opencode-secondary.json
-stage_file "$LIVE_HOME/.config/zed/settings.json"             config/zed-settings.json
 stage_file "$LIVE_HOME/.config/opencode/oh-my-openagent.json" oh-my-openagent.json
 stage_file "$LIVE_HOME/.config/opencode/AGENTS.md"            AGENTS.md
-stage_file "$LIVE_HOME/.config/zed/AGENTS.md"                 .zed-AGENTS.md
 
-# Strip engram-sync hook entries from the staged Claude settings (same
-# Claude-only policy as the hooks exclusion above).
+# Strip engram-sync and Herdr hook entries from the staged Claude settings (same
+# Claude-only policy as the hooks exclusion above; `herdr integration install claude`
+# re-adds its entry on machines that run Herdr).
 if [ -f "$STAGE/config/claude-settings.json" ]; then
   command -v python3 >/dev/null 2>&1 || die "python3 required to filter claude-settings.json hooks"
   # explicit || die: a failed left side of '&&' would NOT abort under set -e
@@ -129,7 +249,7 @@ hooks = d.get("hooks", {})
 for ev in list(hooks):
     kept = []
     for m in hooks[ev]:
-        hs = [h for h in m.get("hooks", []) if "engram-sync" not in h.get("command", "")]
+        hs = [h for h in m.get("hooks", []) if not any(t in h.get("command", "") for t in ("engram-sync", "herdr-agent-state"))]
         if hs:
             m["hooks"] = hs
             kept.append(m)
@@ -141,42 +261,35 @@ with open(p, "w") as f:
     json.dump(d, f, indent=2)
     f.write("\n")
 PY
-  ok "claude-settings.json: engram-sync hooks stripped"
+  ok "claude-settings.json: engram-sync and herdr hooks stripped"
 fi
 
 # Refuse to mirror if any managed dir staged empty — with rsync --delete an
 # empty staging dir would wipe the repo copy (e.g. mistyped SYNC_LIVE_HOME).
 for d in $MANAGED_DIRS; do
-  n="$(find "$STAGE/$d" -type f 2>/dev/null | wc -l | tr -d ' ')"
-  [ "${n:-0}" -ge 1 ] || die "staged $d/ is empty or missing — refusing to mirror (would delete repo content)"
+  # find on a missing dir exits non-zero and, under pipefail, would abort the script here (seen on a host without pi)
+  n=0; [ -d "$STAGE/$d" ] && n="$(find "$STAGE/$d" -type f | wc -l | tr -d ' ')"
+  if [ "${n:-0}" -ge 1 ]; then continue; fi
+  if is_optional "$d"; then warn "$d/ not staged (tool absent on this machine) — repo copy left untouched"; continue; fi
+  die "staged $d/ is empty or missing — refusing to mirror (would delete repo content)"
 done
 
-# ── AGENTS.md parity gate (opencode copy must equal Zed copy) ───────
-section "Gate: AGENTS.md parity"
-if [ -f "$STAGE/AGENTS.md" ] && [ -f "$STAGE/.zed-AGENTS.md" ]; then
-  cmp -s "$STAGE/AGENTS.md" "$STAGE/.zed-AGENTS.md" \
-    || die "AGENTS.md drift: opencode and Zed copies differ — reconcile live copies first"
-  rm -f "$STAGE/.zed-AGENTS.md"
-  ok "opencode == Zed"
-else
-  die "AGENTS.md missing from live opencode or Zed config"
-fi
+# ── AGENTS.md presence (the Zed copy and its parity gate were retired 2026-09-21) ──
+section "Gate: AGENTS.md present"
+[ -f "$STAGE/AGENTS.md" ] || die "AGENTS.md missing from live opencode config"
+ok "opencode AGENTS.md staged"
 
 # ── templatize machine-specific paths (BEFORE the sanitize map runs, ──
 #    so real home paths become __HOME__ tokens instead of sanitized paths)
 section "Templatizing machine paths"
-ENGRAM_BIN="$(command -v engram || echo /opt/homebrew/bin/engram)"
-if [ -f "$STAGE/config/zed-settings.json" ]; then
-  perl -pi -e "s#\Q$ENGRAM_BIN\E#__ENGRAM__#g" "$STAGE/config/zed-settings.json" \
-    || die "engram templating failed"
-  ok "zed-settings.json: engram binary -> __ENGRAM__"
-fi
+templatize(){ perl -pi -e "s#\Q$LIVE_HOME\E#__HOME__#g" "$1" || die "__HOME__ templating failed for $1"; }
 for f in "$STAGE"/config/claude-settings.json "$STAGE"/config/claude-settings.local.json \
-         "$STAGE"/config/opencode.jsonc "$STAGE"/config/zed-settings.json \
-         "$STAGE"/config/CLAUDE.md "$STAGE"/oh-my-openagent.json; do
-  if [ -f "$f" ]; then
-    perl -pi -e "s#\Q$LIVE_HOME\E#__HOME__#g" "$f" || die "__HOME__ templating failed for $f"
-  fi
+         "$STAGE"/config/opencode.jsonc "$STAGE"/config/CLAUDE.md "$STAGE"/oh-my-openagent.json; do
+  [ -f "$f" ] && templatize "$f"
+done
+for d in pi codex herdr; do
+  [ -d "$STAGE/$d" ] || continue
+  while IFS= read -r -d '' f; do templatize "$f"; done < <(find "$STAGE/$d" -type f -print0)
 done
 ok "absolute home paths -> __HOME__"
 
@@ -274,7 +387,10 @@ section "Mirroring staging into repo working tree"
 for d in $MANAGED_DIRS; do
   # re-verify non-empty right before --delete (staging could have been cleaned
   # under us between the earlier gate and now)
-  [ -n "$(find "$STAGE/$d" -type f 2>/dev/null | head -1)" ] || die "staged $d/ vanished before mirror — aborting"
+  if [ -z "$(find "$STAGE/$d" -type f 2>/dev/null | head -1)" ]; then
+    is_optional "$d" && { warn "$d/ skipped (not staged)"; continue; }
+    die "staged $d/ vanished before mirror — aborting"
+  fi
   rsync -a --delete "$STAGE/$d/" "$REPO_DIR/$d/" || die "mirror failed for $d/"
   ok "$d/"
 done
@@ -289,6 +405,6 @@ ok "oh-my-openagent.json"
 section "Done — review and commit manually"
 git -C "$REPO_DIR" status --short || true
 warn "review 'git diff' carefully, then commit yourself (single-line message, no emojis, no session URLs)"
-if git -C "$REPO_DIR" status --porcelain 2>/dev/null | grep -qE 'config/(opencode\.jsonc|zed-settings\.json)'; then
-  warn "config/opencode.jsonc or config/zed-settings.json changed — README keeps INLINE copies of both; update README manually"
+if git -C "$REPO_DIR" status --porcelain 2>/dev/null | grep -qE 'config/opencode\.jsonc|oh-my-openagent\.json|^.M pi/|^.M codex/'; then
+  warn "core configs changed — check that README section summaries (6.2, 6.3, 7, 17) still describe them"
 fi
