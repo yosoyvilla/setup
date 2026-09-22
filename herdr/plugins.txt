@@ -1,0 +1,7 @@
+# Herdr plugins on the live machine. Tab-separated: owner/repo[/subdir], pinned commit, plugin_id, enabled|disabled, comment.
+# install.sh: herdr plugin install --ref <commit> <source> --yes, then herdr plugin disable <plugin_id> for disabled rows.
+ChmaraX/herdr-nvim	d1cc8ed5d53e7771471a6978454f3b1d566ef854	chmarax.herdr-nvim	enabled	# herdr-nvim 0.2.1
+aemrebarut/herdr-dagr	ccf6d4f4ff900b254cdcfd8cbbf1ff68e6cb1e61	herdr-dagr	enabled	# herdr-dagr 0.3.0
+iurysza/herdr-tab-smart-rename	b646cc32799801a23cc9b23d298879e602037e2b	tab-smart-rename	enabled	# Smart Rename 0.2.0
+jhochenbaum/herdr-hunk-diff	81b85cea5484099acea93f2e9a08c2677eef461b	jhochenbaum.hunkdiff	enabled	# hunk 0.1.0
+qu8n/herdr-automatic-rename	8bb0db78822e9f6dbb137eb9d425b8907db45d05	herdr-automatic-rename	enabled	# Herdr Automatic Rename 0.7.2
