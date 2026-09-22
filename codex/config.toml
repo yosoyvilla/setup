@@ -1,0 +1,83 @@
+# Curated by scripts/sync-from-live.sh from ~/.codex/config.toml: portable policy only.
+# Marketplaces, MCP servers, project trust entries and desktop state are machine-local and not vendored.
+
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."claude-md-management@claude-plugins-official"]
+enabled = true
+
+[plugins."code-simplifier@claude-plugins-official"]
+enabled = true
+
+[plugins."commit-commands@claude-plugins-official"]
+enabled = true
+
+[plugins."context7@claude-plugins-official"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."explanatory-output-style@claude-plugins-official"]
+enabled = false
+
+[plugins."frontend-design@claude-plugins-official"]
+enabled = true
+
+[plugins."github@claude-plugins-official"]
+enabled = false
+
+[plugins."gopls-lsp@claude-plugins-official"]
+enabled = true
+
+[plugins."learning-output-style@claude-plugins-official"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."php-lsp@claude-plugins-official"]
+enabled = true
+
+[plugins."playwright@claude-plugins-official"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."pyright-lsp@claude-plugins-official"]
+enabled = true
+
+[plugins."ralph-loop@claude-plugins-official"]
+enabled = true
+
+[plugins."security-guidance@claude-plugins-official"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
+enabled = true
+
+[features]
+hooks = true
+js_repl = false
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
+
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"
