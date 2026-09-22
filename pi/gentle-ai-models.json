@@ -1,0 +1,94 @@
+{
+  "gentle-ai-explore": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "gentle-ai-verify": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "gentle-ai-worker": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "jd-fix-agent": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "jd-judge-a": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "jd-judge-b": {
+    "model": "nan/glm5.3-flash",
+    "thinking": "high"
+  },
+  "review-readability": {
+    "model": "anthropic/claude-sonnet-5",
+    "thinking": "low"
+  },
+  "review-reliability": {
+    "model": "anthropic/claude-sonnet-5",
+    "thinking": "low"
+  },
+  "review-resilience": {
+    "model": "anthropic/claude-sonnet-5",
+    "thinking": "low"
+  },
+  "review-risk": {
+    "model": "anthropic/claude-sonnet-5",
+    "thinking": "low"
+  },
+  "sdd-apply": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-archive": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-design": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-explore": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-init": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-onboard": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-proposal": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-remediate": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-research": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-spec": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-status": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-tasks": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  },
+  "sdd-verify": {
+    "model": "nan/deepseek-v4-flash",
+    "thinking": "low"
+  }
+}

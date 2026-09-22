@@ -1,0 +1,32 @@
+{
+  "compaction": {
+    "enabled": true,
+    "keepRecentTokens": 20000,
+    "reserveTokens": 32768
+  },
+  "defaultModel": "deepseek-v4-flash",
+  "defaultProvider": "nan",
+  "defaultThinkingLevel": "low",
+  "enableAnalytics": false,
+  "enabledModels": [
+    "nan/*",
+    "anthropic/claude-sonnet-5",
+    "anthropic/claude-opus-5"
+  ],
+  "hideThinkingBlock": false,
+  "modelThinkingLevels": {
+    "anthropic/claude-opus-5": "low",
+    "anthropic/claude-sonnet-5": "low"
+  },
+  "packages": [
+    "npm:gentle-pi",
+    "npm:pi-mcp-adapter"
+  ],
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3
+  },
+  "tuiMode": "fullscreen",
+  "lastChangelogVersion": "0.87.0",
+  "theme": "dark"
+}
