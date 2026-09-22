@@ -7,7 +7,7 @@
     "commit": "",
     "pr": ""
   },
-  "model": "claude-fable-5[1m]",
+  "model": "claude-fable-5-1[1m]",
   "hooks": {
     "Stop": [
       {
@@ -24,7 +24,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "~/.claude/hooks/rotate-logs.sh",
+            "statusMessage": "Rotating hook logs...",
+            "async": true
           }
         ]
       }
@@ -87,6 +89,17 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/destructive-guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking for destructive command"
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write",
         "hooks": [
           {
@@ -105,11 +118,13 @@
         ]
       },
       {
-        "matcher": "*",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "~/.claude/hooks/test-tamper-guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking for test tampering"
           }
         ]
       }
@@ -134,53 +149,13 @@
         ]
       },
       {
-        "matcher": "*",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
-          }
-        ]
-      }
-    ],
-    "StopFailure": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi"
+            "command": "~/.claude/hooks/tf-verify.sh",
+            "timeout": 90,
+            "statusMessage": "Terraform verifier chain (tflint/checkov/trivy)..."
           }
         ]
       }
@@ -195,14 +170,23 @@
     "playwright@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
-    "explanatory-output-style@claude-plugins-official": true,
+    "explanatory-output-style@claude-plugins-official": false,
     "learning-output-style@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
-    "github@claude-plugins-official": true,
+    "github@claude-plugins-official": false,
     "commit-commands@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
-    "php-lsp@claude-plugins-official": true
+    "php-lsp@claude-plugins-official": true,
+    "ponytail@ponytail": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    }
   },
   "autoDreamEnabled": true,
   "skipWorkflowUsageWarning": true,

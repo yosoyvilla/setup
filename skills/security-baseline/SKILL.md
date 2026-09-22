@@ -1,6 +1,10 @@
+---
+name: security-baseline
+description: Security baseline for this org — secrets handling and rotation, least-privilege IAM, encryption at rest and in transit, container hardening, and access control. Use when provisioning infrastructure, writing IAM policies, handling secrets, building container images, or reviewing anything security-sensitive.
+---
+
 # Security Baseline
 
-> Obsidian: ~/Documents/obsidian-vault/claude-code/security-baseline.md
 
 ## Secrets
 - Never in code, never in env vars if Vault is available

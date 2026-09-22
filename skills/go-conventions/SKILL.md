@@ -1,6 +1,10 @@
+---
+name: go-conventions
+description: Go conventions for project-a Go services (Go 1.17+) — gofmt, %w error wrapping, context-first signatures, naming, table-driven tests, golangci-lint gates, ldflags versioning, and module hygiene. Use when writing, reviewing, testing or building Go code.
+---
+
 # Go Conventions
 
-> Obsidian: ~/Documents/obsidian-vault/claude-code/go.md
 > Applies to: project-a Go services (Go 1.17+)
 
 ## Code Style

@@ -1,6 +1,10 @@
+---
+name: kubernetes-conventions
+description: Kubernetes and Helm conventions for this org — resource requests/limits, PodDisruptionBudgets, probes, label scheme, Helm-over-Kustomize, ArgoCD sync policy, NetworkPolicy defaults, and kubectl troubleshooting. Use when writing or reviewing K8s manifests, Helm charts, ArgoCD Applications, or debugging pods.
+---
+
 # Kubernetes Conventions
 
-> Obsidian: ~/Documents/obsidian-vault/claude-code/kubernetes.md
 
 ## Resource Standards
 - Always set resource requests AND limits
@@ -23,6 +27,7 @@
 - No root containers
 - Read-only root filesystem where possible
 - ServiceAccount per workload (no default)
+- Traefik v3 `basicAuth` middleware: the referenced Secret must contain EXACTLY one key, named `users`. A second key (e.g. `auth` for nginx) makes Traefik log "found N elements for secret, must be single element exactly" and SILENTLY allow all traffic. nginx basic auth needs its own Secret. (Verified live 2026-05-28; 11/11 benchmarked models got this wrong.)
 
 ## Troubleshooting
 ```bash

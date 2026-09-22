@@ -6,7 +6,6 @@
       "Bash(kubectl exec:*)",
       "Bash(kubectl logs:*)",
       "Bash(kubectl describe:*)",
-      "Bash(kubectl delete pod:*)",
       "Bash(kubectl apply:*)",
       "Bash(kubectl config:*)",
       "Bash(. awsume project-c)",
@@ -65,7 +64,6 @@
       "Bash(pip cache purge:*)",
       "Bash(pnpm store prune:*)",
       "Bash(brew:*)",
-      "Bash(python3:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -82,7 +80,6 @@
       "Bash(git sparse-checkout:*)",
       "Bash(gh:*)",
       "Bash(ls:*)",
-      "Bash(find:*)",
       "Bash(du:*)",
       "Bash(wc:*)",
       "Bash(sort:*)",
@@ -146,7 +143,9 @@
       "Bash(grep -ioE \"\\(quick|deep|ultrabrain|visual-engineering|writing|artistry|unspecified-\\(low|high\\)\\)[^,}]{0,60}\" dist/tools/delegate-task/openai-categories.d.ts)",
       "WebFetch(domain:nan.builders)",
       "WebFetch(domain:x.com)",
-      "WebFetch(domain:bun.com)"
+      "WebFetch(domain:bun.com)",
+      "Bash(mdfind -name \"cover\")",
+      "Bash(mdls -name kMDItemFSSize ~/Downloads/David_Villa_CV.pdf)"
     ],
     "deny": [
       "Bash(terraform destroy:*)",
@@ -160,10 +159,36 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean -fd:*)",
       "Edit(.env)",
-      "Edit(terraform.tfstate)",
-      "Write(.env)",
-      "Write(terraform.tfstate)"
+      "Edit(terraform.tfstate)"
     ],
     "ask": []
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"__HOME__/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"__HOME__/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"__HOME__/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"__HOME__/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop."
 }

@@ -2,7 +2,6 @@
 name: incident-response
 description: Use when investigating production outages, degraded performance, or unexpected behavior. Covers project-a (EKS + New Relic), project-c (EKS + ArgoCD + Loki), project-b (GKE + Traefik), and project-d (Dokploy).
 user-invocable: true
-disable-model-invocation: true
 ---
 
 Investigate incident: $ARGUMENTS
@@ -67,6 +66,7 @@ docker stats --no-stream           # CPU/memory snapshot
 Dokploy UI: check deployment status and recent deployment logs for the affected service.
 
 ---
+- CloudWatch Logs Insights syntax that is REJECTED live even though docs list it: scientific-notation literals (`/1e9` -> write `/1000000000`), `sort` on an unaliased aggregate (`sort count() desc` -> `stats count() as c ... | sort c desc`), `strcontains()`/`startsWith()` (use `like`). A `filter` placed after `stats` filters the aggregated rows (volume guard: `| filter n > 100`). Execute every query once before handing it over.
 
 ## 3. Correlate
 ```bash
@@ -104,3 +104,17 @@ NEXT UPDATE: [Time]
 - Root cause
 - What worked / what didn't
 - Action items with owners and due dates
+
+## Converge, do not exhaust (added 2026-08-21, evidence-based)
+
+State a hypothesis early, gather only evidence that DISCRIMINATES between hypotheses,
+and stop. ITBench-AA measured agents on Kubernetes root-cause from alerts, traces,
+metrics, logs and topology: **58 turns -> 37%, 83 turns -> 30%**. More turns made it
+worse. The maxTurns cap should never be what stops you.
+
+Calibrate confidence accordingly: frontier models score **11.4% on SRE scenarios**
+(ITBench) and **under 50% on K8s root-cause** (ITBench-AA). Present a diagnosis as a
+hypothesis to verify, never as a conclusion. Say what would falsify it.
+
+Reproduce before fixing. Removing the reproduction step measurably degraded every model
+tested (arXiv:2604.12147) — do not skip straight to a remedy.
