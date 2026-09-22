@@ -37,6 +37,17 @@ When an agent or skill produces the same bad pattern twice, edit the agent or
 skill definition (and sync the vault) instead of hand-fixing instances.
 One definition edit fixes the class of error; a hand-fix repairs one instance.
 
+## Mutation Protocol (prod and shared state)
+Added 2026-09-22. Any mutation of production or shared state (config edit, kubectl
+patch, DB change, cloud API write) follows: (1) verify the CURRENT state; (2) back up;
+(3) verify the backup actually captured the PRE-change content (size/checksum diff) —
+a backup taken after the change is a misleading rollback artifact; (4) apply; (5)
+verify the RESULT. Never proceed on an unobserved tool result: a command whose output
+you did not see may or may not have run. Pass nested scripts to `ssh` via base64
+instead of layered quoting. On 2026-09-22 a Solr config edit returned no output, was
+assumed not to have run, and had in fact applied — the re-run then produced a backup
+of an already-modified file.
+
 ## Trial Run Before Fan-Out
 Before any bulk or parallel operation over 3+ similar items (mass edits,
 multi-file migrations, parallel agents), run 2-3 representative items first,

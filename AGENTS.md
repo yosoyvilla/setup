@@ -69,6 +69,11 @@ these where they conflict.
   `nan/mimo-v2.5` is wired for audio only here and must not receive
   screenshots. Never describe an image you were not given. Use
   `browser_snapshot` (accessibility text) for DOM interaction on any model.
+- Aggregated telemetry can be SAMPLED. Before quoting a count from an analytics API
+  (Cloudflare `httpRequestsAdaptiveGroups`, sampled log/metric datasets), confirm the
+  sampling and report `count x avg.sampleInterval` — or label the figure as relative.
+  Never publish a dimensional breakdown from an unnormalized sample: on 2026-09-22 the
+  same window returned 455 vs 19,004 for two queries that differed only in `limit`.
 
 ## Memory (Engram)
 

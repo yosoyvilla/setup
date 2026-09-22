@@ -118,3 +118,30 @@ hypothesis to verify, never as a conclusion. Say what would falsify it.
 
 Reproduce before fixing. Removing the reproduction step measurably degraded every model
 tested (arXiv:2604.12147) — do not skip straight to a remedy.
+
+## Step-change triage (added 2026-09-22, after a near-miss)
+
+For a SHARP step in a metric (a rate that jumps at one minute and stays), the cause
+happened at that minute. FIRST enumerate what changed around that time — config-file
+mtimes (`ls -la`), deploy/rollout times, API/config writes — and bisect by time. Only
+then chase "where does this message come from". On 2026-09-22 a single `ls -la` on
+solrconfig.xml (mtime == the exact 500s step) closed a five-round hunt that had gone
+Solr logs -> container log files -> repo greps -> dead-end concurrency tests.
+
+## Never test with your own client and call it the system's behaviour (added 2026-09-22)
+
+Before reporting a user-facing symptom, state what your test client is and whether it
+is a valid probe. Check: (a) your egress COUNTRY vs the target's IP Access Rules — a
+whitelisted country short-circuits the whole WAF (portal-4 whitelists CO, so a CO probe
+proves nothing about portal-4's rules); (b) whether your client is AUTOMATED — a headless
+browser is classified as a bot by SBFM and blocked where a real browser passes; (c)
+whether the target's BIC/bot rules turn bare curl into a false 403. Prefer independent
+telemetry (edge/CDN analytics) over your own request. Test-method validity is part of
+the claim — on 2026-09-22 a self-blocked probe was reported as a site finding twice.
+
+## Time-box diagnostics (added 2026-09-22)
+
+After 3 attempts that fail to converge, consult Oracle — or stop and report the
+hypothesis plus what would falsify it. Do not keep digging past the point where the
+next attempt is unlikely to discriminate between hypotheses (see "Converge, do not
+exhaust" above).
