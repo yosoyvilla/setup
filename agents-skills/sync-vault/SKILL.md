@@ -1,0 +1,44 @@
+---
+name: sync-vault
+description: Sync the Obsidian knowledge base with current Codex configuration. Use after modifying agents, skills, hooks, rules, plugins, or settings.
+user-invocable: true
+disable-model-invocation: true
+---
+
+Sync the Obsidian vault at ~/Documents/obsidian-vault/ with the current Codex configuration.
+
+## Steps
+
+1. Read the current state of all configuration:
+   - ~/.Codex/settings.json (model, plugins, hooks)
+   - ~/.Codex/settings.local.json (permissions)
+   - ~/.Codex/AGENTS.md (global rules)
+   - ~/.Codex/agents/*.md (all agents)
+   - ~/.Codex/skills/*/SKILL.md (all skills)
+   - ~/.Codex/rules/*.md (shared rules)
+
+2. Read the current vault documentation:
+   - ~/Documents/obsidian-vault/Codex/setup.md
+   - ~/Documents/obsidian-vault/Codex/multi-project-workflow.md
+   - ~/Documents/obsidian-vault/Codex/tips-and-tricks.md
+
+3. Compare and identify differences between the actual config and vault docs.
+
+4. Update the vault files to match the actual current state. Focus on:
+   - Agent list, models, maxTurns, descriptions
+   - Plugin list
+   - Hook list
+   - Skill list
+   - Security settings (denylists, protected files)
+   - Routing rules
+   - Any new features or changes
+
+5. Update project files if needed:
+   - ~/Documents/obsidian-vault/projects/*.md
+
+6. Commit and push:
+   ```bash
+   cd ~/Documents/obsidian-vault && git add -A && git commit -m "<descriptive message>" && git push
+   ```
+
+7. Report what was updated.
