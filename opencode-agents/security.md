@@ -2,13 +2,11 @@
 description: >-
   Security review and advisory. Use for IAM policy review, secrets audit, compliance checks, or security scanning results analysis. Read-only -- does not modify code. Uses haiku for cost efficiency.
 mode: subagent
-model: nan/qwen3.6
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
-  write: allow
   task: deny
 ---
 

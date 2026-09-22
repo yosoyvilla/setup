@@ -1,9 +1,10 @@
 ---
 description: >-
-  Harness self-test. Stage 1 statically validates harness invariants
-  (NaN-only, AGENTS.md parity, denylist, Engram); Stage 2 confirms liveness on
-  a NaN model; Stage 3 scans the recent log for errors. Run after any config or
-  plugin change.
+  Harness self-test. Stage 1 statically validates harness invariants (role map,
+  Claude seats, effort aliases, denylist, Engram) and runs the plugin hook tests;
+  Stage 1b proves the effort hook runs AFTER oh-my-openagent; Stage 2 confirms
+  liveness on NaN; Stage 3 scans the recent log for errors. Run after any config
+  or plugin change.
 ---
 
 Run a harness smoke test and report the result concisely.
@@ -19,8 +20,21 @@ Run a harness smoke test and report the result concisely.
    in `errors` — these are config regressions (non-NaN model, AGENTS.md drift,
    missing denylist guard, broken JSON, Engram unwired) and mean Stage-1 FAIL
    regardless of liveness.
+1b. **Effort hook order (live, one cheap NaN call).** oh-my-openagent's
+   resolver deletes/rewrites `reasoningEffort`; the harness plugin must run
+   after it. Run:
+
+   ```bash
+   opencode run --format json -m nan/deepseek-v4-flash-none "Reply with exactly: OK" >/dev/null 2>&1; \
+   sqlite3 ~/.local/share/opencode/opencode.db "SELECT json_extract(data,'$.modelID'), json_extract(data,'$.tokens.reasoning') FROM message WHERE json_extract(data,'$.role')='assistant' AND json_extract(data,'$.modelID')='deepseek-v4-flash-none' ORDER BY time_created DESC LIMIT 1;"
+   ```
+
+   Expect `deepseek-v4-flash-none|0`. A non-zero reasoning count means the hook
+   did not apply (plugin order or hook regression) and every NaN seat is
+   running at omo's rewritten effort: Stage-1b FAIL.
 2. State the model and agent you are currently running as. Confirm the provider
-   is `nan` (the only allowed provider). If it is not `nan/*`, flag it loudly.
+   is `nan` (Claude is allowed only for `@critic` and `@plan-critic`, never for
+   the primary agent). If the primary is not `nan/*`, flag it loudly.
 3. Run this shell command to scan the most recent log for real errors and
    fallbacks (benign INFO lines containing "undefined" do not count):
 

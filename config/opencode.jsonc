@@ -1,13 +1,13 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "nan/deepseek-v4-flash",
-  "small_model": "nan/qwen3.6",
-  "enabled_providers": ["nan"],
+  "model": "nan/deepseek-v4-flash-low",
+  "small_model": "nan/deepseek-v4-flash-none",
+  "enabled_providers": ["nan", "anthropic"],
   "lsp": true,
   "compaction": {
     "auto": true,
     "prune": true,
-    "reserved": 32768
+    "reserved": 50000
   },
   // Domain rules shared with Claude Code — single source of truth in ~/.claude/rules/.
   "instructions": ["__HOME__/.claude/rules/*.md"],
@@ -62,6 +62,16 @@
     "oh-my-openagent@4.16.1"
   ],
   "provider": {
+    // Claude (pay-as-you-go API key in ~/.local/share/opencode/auth.json, never in this file).
+    // Bound ONLY to the custom review seats: agents/critic.md (sonnet-5) and agents/plan-critic.md
+    // (opus-5). limit.output 8192 is the per-call hard cap (thinking + answer). Everything else is NaN.
+    "anthropic": {
+      "whitelist": ["claude-opus-5", "claude-sonnet-5"],
+      "models": {
+        "claude-opus-5":   { "limit": { "context": 1000000, "output": 8192 } },
+        "claude-sonnet-5": { "limit": { "context": 1000000, "output": 8192 } }
+      }
+    },
     "nan": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "NaN",
@@ -69,29 +79,22 @@
         "baseURL": "https://api.nan.builders/v1",
         "apiKey": "{env:NAN_API_KEY}"
       },
+      // Effort aliases: same upstream `id`, plus options.nanReasoningEffort which
+      // plugins/harness-guards.js copies into reasoningEffort AFTER oh-my-openagent's
+      // resolver runs (omo deletes/rewrites reasoningEffort for these families; verified
+      // 2026-09-21: none -> 0 reasoning tokens only with the hook). Benchmark 2026-09-21
+      // (73 items x 3 runs): deepseek low = best accuracy/latency; glm5.3-flash = second family.
       "models": {
-        "qwen3.6": {
-          "name": "NaN — qwen3.6",
-          "limit": { "context": 262144, "output": 32768 },
-          "attachment": true,
-          "modalities": { "input": ["text", "image"], "output": ["text"] }
-        },
-        "deepseek-v4-flash": {
-          "name": "NaN — deepseek-v4-flash",
-          "limit": { "context": 1000000, "output": 32768 }
-        },
-        "mimo-v2.5": {
-          "name": "NaN — mimo-v2.5",
-          "limit": { "context": 1000000, "output": 32768 },
-          "attachment": true,
-          "modalities": { "input": ["text", "image"], "output": ["text"] }
-        },
-        "gemma4": {
-          "name": "NaN — gemma4",
-          "limit": { "context": 262144, "output": 32768 },
-          "attachment": true,
-          "modalities": { "input": ["text", "image"], "output": ["text"] }
-        }
+        "deepseek-v4-flash":      { "name": "NaN — deepseek-v4-flash (adaptive)", "limit": { "context": 1048575, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] } },
+        "deepseek-v4-flash-low":  { "id": "deepseek-v4-flash", "name": "NaN — deepseek-v4-flash (effort low)", "limit": { "context": 1048575, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "options": { "nanReasoningEffort": "low" } },
+        "deepseek-v4-flash-none": { "id": "deepseek-v4-flash", "name": "NaN — deepseek-v4-flash (effort none)", "limit": { "context": 1048575, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "options": { "nanReasoningEffort": "none" } },
+        "glm5.3-flash":           { "name": "NaN — glm5.3-flash (adaptive)", "limit": { "context": 1048576, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] } },
+        "glm5.3-flash-low":       { "id": "glm5.3-flash", "name": "NaN — glm5.3-flash (effort low)", "limit": { "context": 1048576, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "options": { "nanReasoningEffort": "low" } },
+        "glm5.3-flash-high":      { "id": "glm5.3-flash", "name": "NaN — glm5.3-flash (effort high)", "limit": { "context": 1048576, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] }, "options": { "nanReasoningEffort": "high" } },
+        "mimo-v2.5": { "name": "NaN — mimo-v2.5 (audio only)", "limit": { "context": 1048576, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "audio"], "output": ["text"] } },
+        // Catalog-only (no role): gemma4 last resort for bounded prompts; qwen3.6 so old sessions resume.
+        "gemma4":  { "name": "NaN — gemma4", "limit": { "context": 262144, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] } },
+        "qwen3.6": { "name": "NaN — qwen3.6 (legacy)", "limit": { "context": 262144, "output": 32768 }, "attachment": true, "modalities": { "input": ["text", "image"], "output": ["text"] } }
       }
     }
   }

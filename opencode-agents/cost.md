@@ -2,13 +2,11 @@
 description: >-
   Cloud cost analysis and optimization. Use directly for AWS Cost Explorer queries, Kubecost reports, Spot/RI savings analysis, rightsizing recommendations, or cost anomaly investigation. Read-only advisory — does not modify infrastructure. Uses haiku for cost efficiency.
 mode: subagent
-model: nan/qwen3.6
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
-  write: allow
   task: deny
 ---
 

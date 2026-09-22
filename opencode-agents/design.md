@@ -2,14 +2,12 @@
 description: >-
   UI/UX design and frontend quality specialist. Use for creating distinctive interfaces, reviewing visual design, checking accessibility, iterating on layouts, and verifying designs in the browser via Playwright. Route directly for any frontend design task.
 mode: subagent
-model: nan/mimo-v2.5
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

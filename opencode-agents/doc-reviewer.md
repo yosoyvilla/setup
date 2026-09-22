@@ -2,14 +2,12 @@
 description: >-
   Documentation quality reviewer. Use for any documentation we create or edit (Confluence pages, READMEs, runbooks, guides, markdown). Checks that docs read clearly for technical, business, vibecoder, and non-technical audiences; verifies every technical claim against official vendor documentation (>95% confidence, no hallucinations); and catches copy/format issues including special characters and raw markup that should not render. Reviews and reports; applies fixes only when explicitly asked.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   webfetch: allow
   websearch: allow
   task: deny

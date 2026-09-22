@@ -2,13 +2,11 @@
 description: >-
   Code review and engineering standards advisory. Use for code review, refactoring advice, testing strategy, or PR feedback. Read-only -- does not modify code.
 mode: subagent
-model: nan/qwen3.6
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
-  write: allow
   task: deny
 ---
 

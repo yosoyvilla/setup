@@ -2,14 +2,12 @@
 description: >-
   DevSecOps implementation. Use directly for implementing security controls in pipelines, writing OPA/Kyverno policies, configuring container scanning (Trivy/Grype), setting up SAST/DAST, secret rotation automation, or hardening Dockerfiles. This agent IMPLEMENTS security -- for review/audit use the security agent instead.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

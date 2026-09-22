@@ -2,14 +2,12 @@
 description: >-
   Airbyte ELT pipeline operations. Use directly for connector configuration, sync job debugging, connection troubleshooting, namespace mapping issues, or Airbyte API operations. Investigates and fixes connector configs.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

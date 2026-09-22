@@ -2,14 +2,12 @@
 description: >-
   Database operations and optimization. Use directly for query tuning, migration writing, schema changes, connection pooling, or backup configuration. Skip lead for focused database work.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

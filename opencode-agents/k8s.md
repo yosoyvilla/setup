@@ -2,14 +2,12 @@
 description: >-
   Kubernetes platform and GitOps. Use directly for K8s manifest work, Helm chart changes, ArgoCD config, pod troubleshooting, or scaling. Skip lead agent for focused K8s work.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

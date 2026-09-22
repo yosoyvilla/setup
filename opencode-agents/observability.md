@@ -2,14 +2,12 @@
 description: >-
   Monitoring and reliability engineering. Use directly for New Relic NRQL queries, dashboard config, alert tuning, SLO definitions, incident investigation, or cost monitoring. Skip lead for focused observability work.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

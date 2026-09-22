@@ -2,15 +2,13 @@
 description: >-
   Staff/Principal DevOps Tech Lead. Use ONLY for tasks spanning multiple domains, requiring architecture decisions, touching production, or with unclear scope. Do NOT use for single-domain tasks -- route those directly to the domain agent.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   websearch: allow
   webfetch: allow
-  write: allow
   task: deny
 ---
 
@@ -61,7 +59,7 @@ Steps with no dependency between them can run in parallel.
 - **gcp** (sonnet): GKE cluster management, GCP IAM, Workload Identity, Cloud SQL, Artifact Registry, Secret Manager, Terragrunt (project-b only)
 - **aws-incident** (sonnet): Active AWS security incidents, WAF triage, DDoS mitigation, GuardDuty findings, CloudTrail forensics
 - **cost** (haiku): AWS Cost Explorer, Kubecost, Spot/RI savings analysis, rightsizing recommendations (advisory, read-only)
-- **plan-critic** (sonnet): Reviews implementation plans before execution — verifies docs, identifies risks, flags alternatives. MANDATORY after writing any 3+ step plan.
+- **plan-critic** (Claude Opus 5, pay-as-you-go): Reviews plans that touch production, auth/IAM, data, multiple accounts or carry real architectural uncertainty; skip for plans describable in one sentence. Its reply must end with `Review complete.`; otherwise retry once, then treat the review as INCONCLUSIVE.
 
 ## Rules
 - Never implement. You plan, others execute.

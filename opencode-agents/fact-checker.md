@@ -6,7 +6,7 @@ description: >-
   supported / refuted / unverifiable with citations. Invoke via @fact-checker
   or the /council command.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/glm5.3-flash-high
 temperature: 0.1
 permission:
   read: allow

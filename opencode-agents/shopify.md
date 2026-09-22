@@ -2,14 +2,12 @@
 description: >-
   Shopify development. Use directly for Shopify Functions, Admin/Storefront API, theme development, app extensions, Liquid templating, or Shopify CLI tasks. Writes code.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

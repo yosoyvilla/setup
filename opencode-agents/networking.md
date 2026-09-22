@@ -2,14 +2,12 @@
 description: >-
   Network architecture and troubleshooting. Use directly for VPC design, DNS configuration, load balancer setup, VPN/peering, Traefik ingress, service mesh deep-dives, CIDR planning, or network debugging (dig, traceroute, tcpdump). Skip lead for focused networking tasks.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

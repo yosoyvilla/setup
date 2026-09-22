@@ -5,195 +5,150 @@
   ],
   "agents": {
     "sisyphus": {
-      "model": "nan/deepseek-v4-flash",
-      "reasoningEffort": "medium",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/mimo-v2.5"
-        },
-        {
-          "model": "nan/qwen3.6",
-          "temperature": 0.6,
-          "top_p": 0.95
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "prometheus": {
-      "model": "nan/deepseek-v4-flash",
-      "reasoningEffort": "xhigh",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/mimo-v2.5"
-        },
-        {
-          "model": "nan/qwen3.6",
-          "temperature": 0.6,
-          "top_p": 0.95
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "metis": {
-      "model": "nan/deepseek-v4-flash",
-      "temperature": 0.5,
-      "reasoningEffort": "high",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/mimo-v2.5"
-        },
-        {
-          "model": "nan/qwen3.6",
-          "temperature": 0.6,
-          "top_p": 0.95
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "oracle": {
-      "model": "nan/mimo-v2.5",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/deepseek-v4-flash"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "momus": {
-      "model": "nan/mimo-v2.5",
-      "temperature": 0.1,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/deepseek-v4-flash"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "multimodal-looker": {
-      "model": "nan/mimo-v2.5",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "atlas": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
-      "top_p": 0.95,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "explore": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
-      "top_p": 0.95,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "librarian": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
-      "top_p": 0.95,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "sisyphus-junior": {
-      "model": "nan/qwen3.6",
-      "temperature": 0.6,
-      "top_p": 0.95,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/deepseek-v4-flash"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     }
   },
   "categories": {
     "quick": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
-      ],
-      "top_p": 0.95
+      ]
     },
     "unspecified-low": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
-      ],
-      "top_p": 0.95
+      ]
     },
     "unspecified-high": {
-      "model": "nan/deepseek-v4-flash",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/mimo-v2.5"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "writing": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
-      ],
-      "top_p": 0.95
+      ]
     },
     "visual-engineering": {
-      "model": "nan/mimo-v2.5",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/deepseek-v4-flash"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "ultrabrain": {
-      "model": "nan/mimo-v2.5",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/deepseek-v4-flash"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "deep": {
-      "model": "nan/deepseek-v4-flash",
-      "reasoningEffort": "xhigh",
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/mimo-v2.5"
+          "model": "nan/glm5.3-flash-low"
         }
       ]
     },
     "artistry": {
-      "model": "nan/qwen3.6",
-      "temperature": 1.0,
+      "model": "nan/deepseek-v4-flash-low",
       "fallback_models": [
         {
-          "model": "nan/gemma4",
-          "temperature": 1.0
+          "model": "nan/glm5.3-flash-low"
         }
-      ],
-      "top_p": 0.95
+      ]
     }
   },
   "hashline_edit": true,
@@ -239,7 +194,8 @@
   "background_task": {
     "defaultConcurrency": 4,
     "providerConcurrency": {
-      "nan": 4
+      "nan": 6,
+      "anthropic": 1
     }
   }
 }

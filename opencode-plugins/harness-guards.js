@@ -8,8 +8,10 @@ import {
   DISABLED, SECRET_RE, DOC_FILE_RE, BROWSER_TOOL_RE, BASH_PROTECTED_RE,
   LOG_DIR, AUDIT_LOG, state, sessionParent,
   classifyEdit, classifyBash, checkGit, obligations, obligationBlock,
+  CLAUDE_SEATS, ANTHROPIC_MAX_OUTPUT, CLAUDE_EFFORT, NAN_EFFORTS,
 } from "../scripts/harness-guards-lib.mjs"
 import fs from "node:fs"
+
 
 // --- plugin -----------------------------------------------------------------
 
@@ -31,6 +33,39 @@ export const HarnessGuards = async ({ client, directory, $ }) => {
   }
 
   return {
+    // Restore the per-model reasoning effort that oh-my-openagent's chat.params resolver deletes
+    // (unknown model family) or rewrites (deepseek: low/medium -> high). Models declare
+    // `options.nanReasoningEffort` in opencode.jsonc; this runs after omo and re-applies it.
+    // Verified 2026-09-21: without this, effort none/low on nan/deepseek produced 1-4k reasoning
+    // tokens per turn under omo; in --pure mode the same option yielded 0.
+    "chat.params": async (input, output) => {
+      const providerID = input?.provider?.id ?? input?.model?.providerID
+      const modelID = input?.model?.id ?? input?.model?.modelID
+      const agentName = String((typeof input?.agent === "string" ? input.agent : input?.agent?.name) ?? "").toLowerCase()
+      const eff = output?.options?.nanReasoningEffort
+      if (eff !== undefined) {
+        delete output.options.nanReasoningEffort // never forward the carrier key itself
+        if (providerID === "nan" && NAN_EFFORTS.has(eff)) output.options.reasoningEffort = eff
+        else if (providerID === "nan") throw new Error(`[harness-guards] invalid nanReasoningEffort "${eff}" (allowed: ${[...NAN_EFFORTS].join(", ")})`)
+      }
+      // Anthropic (pay-as-you-go): only the two review seats, each pinned to its model, and a hard
+      // per-call cap written into the request (limit.output in opencode.jsonc is catalog/compaction
+      // math only). No thinking budget: Claude 5-family rejects budget_tokens (400).
+      if (providerID === "anthropic") {
+        const allowed = CLAUDE_SEATS.get(agentName)
+        if (!allowed || modelID !== allowed) {
+          throw new Error(
+            `[harness-guards] BLOCKED: Anthropic (pay-as-you-go) is allowed only as ${JSON.stringify(Object.fromEntries(CLAUDE_SEATS))}; ` +
+              `got agent "${agentName}" on "${modelID}". Use a nan/* model.`,
+          )
+        }
+        output.maxOutputTokens = ANTHROPIC_MAX_OUTPUT
+        // The agent's `variant: low` normally supplies this; write it anyway so a rewritten or missing
+        // variant cannot silently raise effort (verified on the wire 2026-09-21 as output_config.effort).
+        output.options.effort = CLAUDE_EFFORT
+      }
+    },
+
     "tool.execute.before": async (input, output) => {
       const tool = input.tool
       if (tool === "write" || tool === "edit") {

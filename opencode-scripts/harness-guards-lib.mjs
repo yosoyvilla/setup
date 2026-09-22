@@ -131,3 +131,13 @@ export function obligationBlock() {
   )
 }
 
+
+// ── Provider routing controls (owner decision 2026-09-21) ────────────────────
+// The only agents allowed to bill Anthropic, each pinned to its model. Mirrored in
+// check-harness.mjs CLAUDE_SEATS; exercised by test-harness-guards-hook.mjs.
+export const CLAUDE_SEATS = new Map([["critic", "claude-sonnet-5"], ["plan-critic", "claude-opus-5"]])
+export const ANTHROPIC_MAX_OUTPUT = 8192
+// Reasoning effort written into every Anthropic request (Anthropic output_config.effort via the provider option `effort`).
+export const CLAUDE_EFFORT = "low"
+// Effort values NaN accepts (reasoning_effort); carried by model alias options.nanReasoningEffort.
+export const NAN_EFFORTS = new Set(["none", "low", "medium", "high", "max"])

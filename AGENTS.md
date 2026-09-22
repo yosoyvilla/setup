@@ -1,15 +1,33 @@
 # Global Instructions
 
-Portable engineering standards for all agent work. This file is shared
-byte-for-byte between opencode (`~/.config/opencode/AGENTS.md`) and Zed
-(`~/.config/zed/AGENTS.md`) — edit them together. Project-level instruction
-files override these where they conflict.
+Portable engineering standards for all agent work in opencode
+(`~/.config/opencode/AGENTS.md`). Project-level instruction files override
+these where they conflict.
 
 ## Models
-- NaN is the only allowed provider. Use `nan/*` models exclusively:
-  `nan/deepseek-v4-flash` (orchestration/planning), `nan/mimo-v2.5` (deep
-  reasoning/review/multimodal), `nan/qwen3.6` (fast/cheap default),
-  `nan/gemma4` (fallback). Never introduce another provider.
+- NaN is the default provider. Use `nan/deepseek-v4-flash-low` for
+  orchestration, planning, execution and search (benchmark 2026-09-21: best
+  accuracy and latency of every reachable model); `nan/glm5.3-flash-low` is the
+  only fallback (second model family, 1M context); `nan/glm5.3-flash-high` runs
+  the fact-checker; `nan/mimo-v2.5` is for audio input only. The `-low`/`-none`/
+  `-high` suffixes are effort aliases applied by the harness plugin; do not set
+  reasoningEffort by hand, oh-my-openagent rewrites it.
+- Claude is allowed on exactly two review seats and nowhere else:
+  `@plan-critic` (anthropic/claude-opus-5) and `@critic`
+  (anthropic/claude-sonnet-5). Enforced by the harness plugin, which rejects
+  any other agent on Anthropic and runs both seats at effort low and caps every Claude call at 8192
+  output tokens (thinking included); the provider whitelist exposes only those two ids. Each Claude
+  spawn is a separate pay-as-you-go call carrying ~90k system tokens, and
+  native task spawns are not serialized by oh-my-openagent: never spawn more
+  than one Anthropic subagent at a time, and never route other work there.
+- Every `@critic` or `@plan-critic` reply, however invoked, must END with its
+  closing block (`@critic`: the JSON verdict block; `@plan-critic`: the line
+  `Review complete.`). A reply without it was truncated at the 8k cap or is
+  malformed: retry once, sequentially; if it fails again treat the review as
+  INCONCLUSIVE, never as approval.
+- Do not delegate questions, diagnosis, research or fact lookups to
+  `@critic` or `@plan-critic`: answer them yourself on NaN, or use
+  `@fact-checker` (NaN) for claims. Those two seats review artifacts only.
 - These are open models. They hallucinate APIs, packages, and config far more
   than frontier models, are overconfident, and have flat confidence
   calibration. Treat every unverified factual claim as suspect — including your
@@ -44,7 +62,7 @@ files override these where they conflict.
 - Escalate when it matters: an adversarial critic for review of any output or
   plan, a fact-checker to verify claims against primary sources, and a
   multi-lens council for high-stakes decisions. (opencode: `@critic`,
-  `@fact-checker`, `/council`. Zed: the matching skills.)
+  `@fact-checker`, `/council`.)
 - Vision needs a vision model. For browser screenshots or any image/visual
   verification, use a vision-capable model (`nan/mimo-v2.5`, `nan/gemma4`, or
   `nan/qwen3.6`); `nan/deepseek-v4-flash` is text-only and will fabricate image
@@ -111,6 +129,11 @@ evidence bar as everything else.
 - Fail fast: validate at boundaries, return early, shallow nesting.
 - Immutability by default. Meaningful names, small functions, no dead or
   commented-out code.
+- Shell loops that call a CLI (`kubectl`, `ssh`, `aws`, `psql`...) must
+  redirect that CLI's stdin from `/dev/null` or read the loop input on a
+  separate descriptor (`while read -r -u 3 ...; done 3< file`). Otherwise the
+  CLI drains the loop's input and only the first item is processed. (0 of 11
+  benchmarked models got this right unprompted.)
 
 ## Git and docs
 - Single-line commit messages. No co-author trailer. No emojis.
@@ -137,8 +160,7 @@ Adapted from Bun's Zig-to-Rust rewrite methodology (bun.com/blog/bun-in-rust).
   needs a paragraph-long justification comment means the code is wrong — fix
   the code. High-risk changes (prod infra, auth, data migrations): two
   independent reviews — `@critic` and `@thermo-nuclear-review` — neither seeing
-  the other's output. (opencode: `@critic`, `/verify`. Zed: the
-  thermo-nuclear-code-quality-review and verify-this skills.)
+  the other's output. (opencode: `@critic`, `/verify`.)
 - Fix the workflow, not the output. When an agent, skill, or command produces
   the same bad pattern twice, edit its definition instead of hand-fixing
   instances — one definition edit fixes the class of error.

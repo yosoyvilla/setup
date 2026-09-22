@@ -2,13 +2,11 @@
 description: >-
   AWS security incident response. Use directly for active attacks, anomalous traffic, WAF triage, DDoS mitigation, GuardDuty findings, CloudTrail forensics, or suspicious account activity. Investigates and applies mitigations. Use for live incidents -- for IAM audits and compliance reviews use the security agent instead.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
-  write: allow
   edit: allow
   task: deny
 ---

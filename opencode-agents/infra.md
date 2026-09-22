@@ -2,14 +2,12 @@
 description: >-
   Infrastructure as Code and cloud architecture. Use directly for single-domain infra tasks like Terraform changes, AWS/GCP resource provisioning, Cloudflare DNS, Netlify config, or cost analysis. Skip lead agent for focused infra work.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

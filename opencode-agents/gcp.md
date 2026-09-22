@@ -2,14 +2,12 @@
 description: >-
   GCP infrastructure and operations. Use directly for GKE cluster management, GCP IAM, Workload Identity, Cloud SQL, Artifact Registry, Secret Manager, Cloud Run, Terragrunt, or GCP networking. Writes code and runs gcloud commands.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 

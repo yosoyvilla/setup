@@ -2,14 +2,12 @@
 description: >-
   CI/CD pipelines and build systems. Use directly for GitHub Actions workflow changes, Bitbucket Pipelines config, Docker image builds, or deployment automation. Skip lead for focused CI/CD work.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/deepseek-v4-flash-low
 permission:
   read: allow
   grep: allow
   glob: allow
-  bash: allow
   edit: allow
-  write: allow
   task: deny
 ---
 
