@@ -63,11 +63,12 @@ these where they conflict.
   plan, a fact-checker to verify claims against primary sources, and a
   multi-lens council for high-stakes decisions. (opencode: `@critic`,
   `@fact-checker`, `/council`.)
-- Vision needs a vision model. For browser screenshots or any image/visual
-  verification, use a vision-capable model (`nan/mimo-v2.5`, `nan/gemma4`, or
-  `nan/qwen3.6`); `nan/deepseek-v4-flash` is text-only and will fabricate image
-  descriptions. Use `browser_snapshot` (accessibility text) for DOM interaction
-  on any model.
+- Vision needs a vision model. In this config `nan/deepseek-v4-flash` (all
+  effort aliases), `nan/glm5.3-flash`, `nan/gemma4` and `nan/qwen3.6` accept
+  image input (benchmark 2026-09-21: deepseek low 2/2 on the vision items);
+  `nan/mimo-v2.5` is wired for audio only here and must not receive
+  screenshots. Never describe an image you were not given. Use
+  `browser_snapshot` (accessibility text) for DOM interaction on any model.
 
 ## Memory (Engram)
 
