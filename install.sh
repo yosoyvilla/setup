@@ -84,19 +84,19 @@ else
 fi
 
 # ════════════════════════════════════════════════════════════════════
-# 2. Node.js 20
+# 2. Node.js 22 (pi requires >= 22.19; opencode and Claude Code run on 22)
 # ════════════════════════════════════════════════════════════════════
-section "Node.js 20"
+section "Node.js 22"
 if [ "$OS" = "macos" ]; then
-  brew list node@20 >/dev/null 2>&1 || brew install node@20 >/dev/null 2>&1
-  export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
-  grep -q 'node@20/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
+  brew list node@22 >/dev/null 2>&1 || brew install node@22 >/dev/null 2>&1
+  export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+  grep -q 'node@22/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="/opt/homebrew/opt/node@22/bin:$PATH"' >> ~/.zshrc
 else
   if [ ! -d "$HOME/.nvm" ]; then
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash >/dev/null 2>&1
   fi
   export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-  nvm install 20 >/dev/null 2>&1 && nvm alias default 20 >/dev/null 2>&1
+  nvm install 22 >/dev/null 2>&1 && nvm alias default 22 >/dev/null 2>&1
 fi
 have node && ok "node $(node --version)" || err "node not on PATH"
 
