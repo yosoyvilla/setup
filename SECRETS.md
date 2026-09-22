@@ -15,13 +15,22 @@ Then reload: `source ~/.zshrc`
 ## Secrets Reference
 
 ### NAN_API_KEY
-- **Used by:** opencode (`oh-my-openagent`), Zed IDE
-- **Purpose:** Access to NaN API — an OpenAI-compatible proxy for qwen3.6, deepseek-v4-flash, mimo-v2.5, and gemma4
+- **Used by:** opencode (`{env:NAN_API_KEY}` in `opencode.jsonc`), pi (`$NAN_API_KEY` in `models.json`)
+- **Purpose:** Access to NaN API — an OpenAI-compatible endpoint for deepseek-v4-flash, glm5.3-flash, mimo-v2.5, gemma4 and qwen3.6
+- **Note:** exporting the value into the shell means tools that snapshot the environment (Codex shell snapshots, agent transcripts) can capture it; a Keychain-backed `"apiKey": "!security find-generic-password -ws nan"` is supported by pi's models.json if you prefer to keep it out of the environment
 - **Get it:** https://nan.builders — sign up and generate an API key from your account dashboard
 - **Set it:**
   ```zsh
   export NAN_API_KEY="sk-..."
   ```
+
+### ANTHROPIC API key (pay-as-you-go review seats)
+- **Used by:** opencode `critic`/`plan-critic` agents and pi's gentle-pi review lenses (Claude Sonnet 5 / Opus 5 at effort low, 8192-token cap)
+- **Where it lives:** ONLY in `~/.local/share/opencode/auth.json` (`{"anthropic": {"type": "api", "key": "..."}}`) and `~/.pi/agent/auth.json` (`{"anthropic": {"type": "api_key", "key": "..."}}`), both mode 600. Never in a config file, env var, this repo, or a chat.
+- **Get it:** https://console.anthropic.com → API keys
+
+### Codex / Cursor logins
+- `codex login` (ChatGPT/OpenAI account) and `cursor-agent login` store their own credentials; nothing to export.
 
 ### DIGITALOCEAN_TOKEN
 - **Used by:** `doctl` CLI and Terraform DigitalOcean provider (project-d project)

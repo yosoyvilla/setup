@@ -1,6 +1,6 @@
 # Developer Setup Guide
 
-Complete setup for a development workstation running **macOS, Debian/Ubuntu, or Fedora**: Claude Code, opencode CLI, Zed IDE, and all supporting tooling. Written to be followed top-to-bottom on a fresh machine.
+Complete setup for a development workstation running **macOS, Debian/Ubuntu, or Fedora**: Claude Code, opencode CLI, the pi coding agent (gentle-pi), Codex CLI, Herdr, and all supporting tooling. Written to be followed top-to-bottom on a fresh machine.
 
 > **For AI agents reading this:** This document describes a real, active setup. Every config block is accurate and production-tested. Follow sections in order — prerequisites before tools, tools before config. All agent and skill system prompts are LLM-agnostic — they work with Claude, GPT, Qwen, DeepSeek, or any capable model.
 
@@ -8,14 +8,14 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
 
 ## Quick Start (automated)
 
-On **macOS** or **Debian/Ubuntu**, the bundled installer does the whole setup — tools, Claude Code, opencode, Zed, Engram, Playwright, and every vendored config/agent/skill/rule/hook:
+On **macOS** or **Debian/Ubuntu**, the bundled installer does the whole setup — tools, Claude Code, opencode, pi + gentle-pi, Codex CLI, Herdr, Engram, Playwright, and every vendored config/agent/skill/rule/hook:
 
 ```bash
 git clone git@github.com:yosoyvilla/setup.git && cd setup
 ./install.sh
 ```
 
-`install.sh` is **idempotent** (safe to re-run) and **unattended** (never prompts, never writes secrets). It auto-detects the OS, backs up any existing configs before overwriting, templatizes machine-specific paths, validates the opencode harness at the end, and prints a **TODO list** of the handful of steps it cannot automate (API keys, `gh`/`aws`/`gcloud` auth, the Zed API-key UI step, launching opencode once to install the plugin). The sections below document every step the script performs, for manual setup, Fedora, or reference.
+`install.sh` is **idempotent** (safe to re-run) and **unattended** (never prompts, never writes secrets). It auto-detects the OS, backs up any existing configs before overwriting, templatizes machine-specific paths, validates the opencode harness at the end, and prints a **TODO list** of the handful of steps it cannot automate (API keys, `gh`/`aws`/`gcloud`/`codex` auth, the Anthropic key files for the review seats, launching opencode once to install the plugin). The sections below document every step the script performs, for manual setup, Fedora, or reference.
 
 ### Claude Code only (for teammates)
 
@@ -26,13 +26,13 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
 ./install-claude.sh
 ```
 
-`install-claude.sh` installs the Claude Code CLI and places everything under `~/.claude` (CLAUDE.md, settings, 18 agents, skills with support scripts, rules, the auto-sync hook) — and touches **nothing else**: no opencode, no Zed, no Engram, no extra tooling. Same guarantees as `install.sh` (idempotent, unattended, backups). `install.sh` delegates its Claude Code section to this script, so the logic exists once.
+`install-claude.sh` installs the Claude Code CLI and places everything under `~/.claude` (CLAUDE.md, settings, 18 agents, skills with support scripts, rules, the auto-sync hook) — and touches **nothing else**: no opencode, no pi, no Herdr, no Engram, no extra tooling. Same guarantees as `install.sh` (idempotent, unattended, backups). `install.sh` delegates its Claude Code section to this script, so the logic exists once.
 
 ---
 
 ## Table of Contents
 
-1. [Two AI Assistants — Architecture Overview](#1-two-ai-assistants--architecture-overview)
+1. [AI Assistants — Architecture Overview](#1-ai-assistants--architecture-overview)
 2. [Platform Notes](#2-platform-notes)
 3. [System Prerequisites](#3-system-prerequisites)
 4. [Shell Environment](#4-shell-environment)
@@ -52,10 +52,11 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
    - [TUI and Legacy Config](#64-tui-and-legacy-config)
    - [Verify Installation](#65-verify-installation)
    - [Shared AGENTS.md, Custom Agents, Commands](#66-shared-agentsmd-custom-agents-and-commands)
-7. [Zed IDE](#7-zed-ide)
+7. [pi coding agent + gentle-pi](#7-pi-coding-agent--gentle-pi)
    - [Installation](#71-installation)
    - [Config](#72-config)
-   - [Skills](#73-zed-skills)
+   - [Guard extension and checker](#73-guard-extension-and-checker)
+   - [gentle-pi](#74-gentle-pi)
 8. [Engram (Persistent Memory)](#8-engram-persistent-memory)
 9. [Obsidian Vault](#9-obsidian-vault)
 10. [Environment Variables](#10-environment-variables)
@@ -64,51 +65,51 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
 13. [Post-Install Checklist](#13-post-install-checklist)
 14. [Troubleshooting](#14-troubleshooting)
 15. [Keeping the Repo in Sync](#15-keeping-the-repo-in-sync)
+16. [Herdr](#16-herdr)
+17. [Codex CLI](#17-codex-cli)
 
 ---
 
-## 1. Two AI Assistants — Architecture Overview
+## 1. AI Assistants — Architecture Overview
 
-This setup uses **two separate AI coding assistants**. They are completely independent: different config directories, different agent formats, different tool systems. Agents and skills from one do **not** carry over to the other.
+This setup runs several independent AI coding tools. Each has its own config directory, agent format and tool system; agents and skills from one do **not** carry over to another, except for the shared skills directory `~/.agents/skills` that opencode and pi both read.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  claude  (Claude Code CLI)          opencode  (opencode CLI)        │
-│  ─────────────────────────          ─────────────────────────────   │
-│  Config: ~/.claude/                 Config: ~/.config/opencode/      │
-│  Agents: ~/.claude/agents/*.md      Agents: oh-my-openagent plugin  │
-│  Skills: ~/.claude/skills/          Skills: built-in (LSP, Exa...)  │
-│  Model:  opus[1m] (Claude)          Model:  NaN (nan/* only)         │
-│  Auth:   Anthropic account          Auth:   NAN_API_KEY              │
-└─────────────────────────────────────────────────────────────────────┘
-```
+| Tool | Config | Agents | Default model | Auth |
+|---|---|---|---|---|
+| Claude Code (`claude`) | `~/.claude/` | `~/.claude/agents/*.md` | `claude-fable-5-1[1m]` | Anthropic account |
+| opencode | `~/.config/opencode/` | oh-my-openagent + 21 custom agents | `nan/deepseek-v4-flash-low`; Claude on two review seats | `NAN_API_KEY` + Anthropic key in `auth.json` |
+| pi + gentle-pi | `~/.pi/agent/`, `~/.pi/gentle-ai/` | gentle-pi packaged agents | `nan/deepseek-v4-flash` at thinking low; Claude on the review lenses | `NAN_API_KEY` + Anthropic key in `auth.json` |
+| Codex CLI / Cursor CLI | `~/.codex/`, `~/.cursor/` | none (blind reviewers) | `gpt-5.6-sol` high / `auto` | `codex login` / `cursor-agent login` |
+| Herdr | `~/.config/herdr/` | detects the agents above in its panes | — | — |
 
-### Why two tools?
+### Why several tools?
 
 | Use case | Tool | Why |
 |---|---|---|
 | Structured DevOps workflows | Claude Code | Domain agents (infra, k8s, security…), skills, hooks, memory |
-| Fast codebase exploration | opencode | qwen3.6 (free/fast) via NaN API |
-| Deep autonomous tasks | opencode | oh-my-openagent parallel orchestration |
-| Inline code editing in Zed | Zed | qwen3.6 for edit predictions |
+| Orchestrated NaN work, councils, verify pipeline | opencode | oh-my-openagent + custom `/council`, `/verify`, `/best-of` commands; Claude only on two review seats |
+| Cheaper NaN sessions, gentle-pi ODD/SDD workflow | pi | Native per-model effort; ~6k-token system prompt vs opencode's ~90k on Claude calls |
+| Blind adversarial reviews from other model families | Codex CLI, Cursor CLI | Reviewers that never see the implementer's reasoning |
+| Running all of the above side by side | Herdr | Persistent panes, agent state in a sidebar, CLI to start/prompt/wait on agents |
+
+Zed was part of this setup until 2026-09-21 and was removed (uninstalled on the live machine, sections retired here).
 
 ### Agent systems compared
 
-| Concept | Claude Code | opencode (oh-my-openagent) |
-|---|---|---|
-| Config location | `~/.claude/agents/*.md` | `~/.config/opencode/oh-my-openagent.json` |
-| Agent format | Markdown + YAML frontmatter | JSON model config per agent name |
-| Domain agents | 18 custom agents (infra, k8s, gcp, doc-reviewer…) | None — Sisyphus delegates by task category |
-| Orchestrator | `lead` agent (Claude Opus) | Sisyphus (nan/deepseek-v4-flash) |
-| Plan review | `plan-critic` agent | Momus (nan/mimo-v2.5) |
-| Spec-first planning | `spec-driven-development` skill | Prometheus agent + `/start-work` |
-| Fast/cheap execution | `code-quality`, `security`, `cost` (haiku) | Explore, Librarian, Atlas, Sisyphus-Junior (nan/qwen3.6) |
-| Deep execution | Most domain agents (sonnet) | Sisyphus / deep category (nan/deepseek-v4-flash) |
-| Tool names | `Read`, `Grep`, `Glob`, `Bash`, `Edit`, `Write` | File system, LSP, AST-grep, web search (built-in) |
+| Concept | Claude Code | opencode (oh-my-openagent) | pi (gentle-pi) |
+|---|---|---|---|
+| Config location | `~/.claude/agents/*.md` | `~/.config/opencode/{oh-my-openagent.json,agents/*.md}` | `~/.pi/agent/*.json`, `~/.pi/gentle-ai/models.json` |
+| Domain agents | 18 custom agents (infra, k8s, gcp, doc-reviewer…) | 21 custom agents (11 domain, 6 advisory/lead, 4 review seats) | gentle-pi's packaged agents (explore/worker/verify, review lenses, SDD) |
+| Orchestrator | `lead` agent (Claude Opus) | Sisyphus on `nan/deepseek-v4-flash-low` | the session itself on `nan/deepseek-v4-flash` at thinking low |
+| Plan review | `plan-critic` agent | `@plan-critic` (Claude Opus 5, effort low, 8k cap) | gentle-pi native review (reliability/risk/resilience/readability lenses) |
+| Adversarial review | `code-quality` agent | `@critic` (Claude Sonnet 5, effort low, 8k cap) + `@thermo-nuclear-review` (NaN) | review lenses on Claude Sonnet 5, effort low, 8k cap |
+| Fact checking | — | `@fact-checker` on `nan/glm5.3-flash-high` | — |
+| Everything else | sonnet / haiku aliases | `nan/deepseek-v4-flash-low`, fallback `nan/glm5.3-flash-low` | `nan/deepseek-v4-flash` low |
+| Enforcement | hooks (`destructive-guard.sh` etc.) | permissions + `harness-guards.js` plugin + `check-harness.mjs` | `harness-guards.ts` extension + `check-pi-harness.mjs` (pi has no permission layer) |
 
 ### Key distinction for agents and skills in this repo
 
-The files in `agents/` and `skills/` are **Claude Code files only** — they use Claude Code's tool names and agent system, and opencode cannot load or run them. The repo also vendors opencode-specific assets (`opencode-agents/`, `opencode-commands/`), Zed skills (`zed-skills/`), and a shared, tool-agnostic `AGENTS.md`.
+The files in `agents/` and `skills/` are **Claude Code files only** — they use Claude Code's tool names and agent system, and opencode cannot load or run them. The repo also vendors opencode-specific assets (`opencode-agents/`, `opencode-commands/`), the shared skills directory (`agents-skills/`, i.e. `~/.agents/skills`), pi (`pi/`), Codex (`codex/`), Herdr manifests (`herdr/`), and a tool-agnostic `AGENTS.md`.
 
 When you set up a new machine:
 - `agents/*.md` → copy to `~/.claude/agents/` (Claude Code)
@@ -118,10 +119,11 @@ When you set up a new machine:
 - `opencode-agents/*.md` → `~/.config/opencode/agents/`, `opencode-commands/*.md` → `~/.config/opencode/commands/` (opencode; see Section 6.6)
 - `opencode-scripts/*.mjs` → `~/.config/opencode/scripts/` (harness checker + harness-guards lib and tests; see Section 6.7)
 - `opencode-plugins/*.js` → `~/.config/opencode/plugins/` (harness-guards enforcement plugin)
-- `AGENTS.md` → byte-identical to **both** `~/.config/opencode/AGENTS.md` and `~/.config/zed/AGENTS.md` (see Section 6.6)
+- `AGENTS.md` → `~/.config/opencode/AGENTS.md` (see Section 6.6); pi has its own `pi/AGENTS.md`
 - `rules/*.md` → `~/.claude/rules/` (Claude Code shared rules: terraform, kubernetes, security-baseline, go)
-- `zed-skills/*` → copy to `~/.agents/skills/` (Zed/opencode shared skills, incl. `webapp-testing/scripts/with_server.py`; see Section 7.3)
-- `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, claude-settings.local.json, opencode.jsonc, opencode-secondary.json, tui.json, zed-settings.json); machine-specific paths use `__HOME__`/`__ENGRAM__` tokens resolved at install time
+- `agents-skills/*` → copy to `~/.agents/skills/` (shared skills read by opencode and pi, incl. `webapp-testing/scripts/with_server.py`)
+- `pi/*` → `~/.pi/agent/` and `~/.pi/gentle-ai/models.json` (Section 7); `codex/*` → `~/.codex/` (Section 17); `herdr/*.txt` → consumed by `herdr plugin install` / `herdr integration install` (Section 16)
+- `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, claude-settings.local.json, opencode.jsonc, opencode-secondary.json, tui.json); machine-specific paths use the `__HOME__` token resolved at install time
 
 Or just run `./install.sh` (Quick Start) to do all of the above automatically — or `./install-claude.sh` for the Claude Code items only.
 
@@ -168,13 +170,17 @@ sudo dnf install -y curl wget git gcc gcc-c++ make
 **macOS:**
 ```bash
 brew install gh ripgrep fzf terraform terraform-docs
-brew install --cask ghostty zed
+brew install --cask ghostty
 # opencode (anomalyco build) — see Section 6.1
 brew install anomalyco/tap/opencode
 # Engram persistent memory (third-party tap) — see Section 8.
 # The same tap also ships gentle-ai.
 brew install gentleman-programming/tap/engram
-# brew install gentleman-programming/tap/gentle-ai   # optional
+brew install gentleman-programming/tap/gentle-ai   # configures gentle-pi (Section 7.4)
+# pi coding agent, Codex CLI, Herdr — see Sections 7, 17, 16
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+npm install -g @openai/codex
+curl -fsSL https://herdr.dev/install.sh | sh
 ```
 
 **Debian/Ubuntu:**
@@ -192,8 +198,10 @@ wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/sha
 echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 sudo apt update && sudo apt install terraform -y
 
-# Zed (AppImage or deb)
-curl -f https://zed.dev/install.sh | sh
+# pi coding agent, Codex CLI, Herdr — see Sections 7, 17, 16
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+npm install -g @openai/codex
+curl -fsSL https://herdr.dev/install.sh | sh
 ```
 
 **Fedora:**
@@ -211,16 +219,18 @@ sudo dnf install -y dnf-plugins-core
 sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
 sudo dnf install -y terraform
 
-# Zed
-curl -f https://zed.dev/install.sh | sh
+# pi coding agent, Codex CLI, Herdr — see Sections 7, 17, 16
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+npm install -g @openai/codex
+curl -fsSL https://herdr.dev/install.sh | sh
 ```
 
-### 3.3 Node.js 20 (required by opencode and Claude Code)
+### 3.3 Node.js 22 (required by pi; opencode and Claude Code run on it too)
 
 **macOS:**
 ```bash
-brew install node@20
-echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
+brew install node@22
+echo 'export PATH="/opt/homebrew/opt/node@22/bin:$PATH"' >> ~/.zshrc
 ```
 
 **Debian/Ubuntu / Fedora:**
@@ -228,14 +238,14 @@ echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
 # Use nvm for version locking
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 source ~/.zshrc  # or restart terminal
-nvm install 20
-nvm use 20
-nvm alias default 20
+nvm install 22
+nvm use 22
+nvm alias default 22
 ```
 
 Verify:
 ```bash
-node --version  # should be v20.x.x
+node --version  # should be v22.x.x (pi needs >= 22.19)
 npm --version   # should be 10.x.x
 ```
 
@@ -371,8 +381,8 @@ ZSH_THEME="robbyrussell"  # or your preferred theme
 source $ZSH/oh-my-zsh.sh
 
 # ── Node ──────────────────────────────────────────────────────────
-# macOS (homebrew node@20):
-export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+# macOS (homebrew node@22):
+export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
 # Linux (nvm): already configured by nvm installer, or:
 # export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
 
@@ -1587,7 +1597,7 @@ The `~/.claude/hooks/` directory holds one script, committed in this repo under 
 |---|---|---|
 | `auto-sync.sh` | Stop, PostCompact (async) | rsync Claude memory/agents/skills/rules/settings → Obsidian vault, then git commit + push |
 
-> **Claude-only policy:** the vendored Claude Code setup is deliberately free of Engram/opencode-ecosystem dependencies so it can be shared with a team that uses Claude Code only. The `engram-sync.sh`/`engram-sync.py` hooks that mirror Claude memory into Engram are NOT vendored and their `settings.json` entries are stripped by `scripts/sync-from-live.sh`. A personal machine that also runs the opencode/Zed stack (Section 8) can add them locally.
+> **Claude-only policy:** the vendored Claude Code setup is deliberately free of Engram/opencode-ecosystem dependencies so it can be shared with a team that uses Claude Code only. The `engram-sync.sh`/`engram-sync.py` hooks that mirror Claude memory into Engram are NOT vendored and their `settings.json` entries are stripped by `scripts/sync-from-live.sh`. A personal machine that also runs the opencode stack (Section 8) can add them locally.
 
 Copy it into place and make it executable:
 ```bash
@@ -1675,7 +1685,7 @@ chmod +x ~/.claude/hooks/auto-sync.sh
 
 #### `engram-sync` hooks (not vendored)
 
-Earlier revisions of this repo also vendored `engram-sync.sh`/`engram-sync.py`, which mirrored Claude memory files into Engram for the opencode/Zed stack. They were removed under the Claude-only policy (see the note at the top of this section): the shared Claude Code setup must not depend on Engram or any non-Claude tooling. A personal machine that wants that bridge can keep the scripts locally in `~/.claude/hooks/` and add the corresponding Stop/PostCompact entries to `settings.json`; `scripts/sync-from-live.sh` will keep them out of the repo automatically.
+Earlier revisions of this repo also vendored `engram-sync.sh`/`engram-sync.py`, which mirrored Claude memory files into Engram for the opencode stack. They were removed under the Claude-only policy (see the note at the top of this section): the shared Claude Code setup must not depend on Engram or any non-Claude tooling. A personal machine that wants that bridge can keep the scripts locally in `~/.claude/hooks/` and add the corresponding Stop/PostCompact entries to `settings.json`; `scripts/sync-from-live.sh` will keep them out of the repo automatically.
 
 ---
 
@@ -1706,123 +1716,18 @@ The oh-my-openagent plugin does **not** need a manual install. opencode installs
 
 ### 6.2 Main Config (`opencode.jsonc`)
 
-File: `~/.config/opencode/opencode.jsonc`
+File: `~/.config/opencode/opencode.jsonc` — vendored as [`config/opencode.jsonc`](config/opencode.jsonc) (the single source; this README no longer carries an inline copy). What it encodes, verified live on 2026-09-21:
 
-```jsonc
-{
-  "$schema": "https://opencode.ai/config.json",
-  "model": "nan/deepseek-v4-flash",
-  "small_model": "nan/qwen3.6",
-  "enabled_providers": ["nan"],
-  "lsp": true,
-  // Domain rules shared with Claude Code — single source of truth in ~/.claude/rules/.
-  "instructions": ["~/.claude/rules/*.md"],
-  "compaction": {
-    "auto": true,
-    "prune": true,
-    "reserved": 32768
-  },
-  "permission": {
-    // Path-glob file protection (parity with the Claude Code file-protection hook).
-    // Content-aware guards live in plugins/harness-guards.js.
-    "edit": {
-      "**/.env": "deny",
-      "**/.env.*": "deny",
-      "**/.env.example": "allow",
-      "**/*.tfstate": "deny",
-      "**/*.tfvars": "deny",
-      "**/*.pem": "deny",
-      "**/*.key": "deny",
-      "**/id_rsa*": "deny",
-      "**/secrets/**": "deny"
-    },
-    "bash": {
-      "*": "allow",
-      "rm -rf /": "deny",
-      "rm -rf /*": "deny",
-      "rm -rf ~": "deny",
-      "rm -rf ~/*": "deny",
-      "git push --force*": "deny",
-      "git push -f*": "deny",
-      "git reset --hard*": "deny",
-      "git clean -fd*": "deny",
-      "terraform destroy*": "deny",
-      "terraform force-unlock*": "deny",
-      "kubectl delete namespace*": "deny"
-    },
-    "skill": {
-      "terraform-devops": "deny",
-      "incident-triage": "deny",
-      "spec-first": "deny"
-    }
-  },
-  "mcp": {
-    "engram": {
-      "type": "local",
-      "command": ["engram", "mcp", "--tools=agent"],
-      "enabled": true
-    },
-    "playwright": {
-      "type": "local",
-      "command": ["npx", "@playwright/mcp@0.0.77", "--headless"],
-      "enabled": true
-    }
-  },
-  "plugin": [
-    "oh-my-openagent@4.16.1"
-  ],
-  "provider": {
-    "nan": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "NaN",
-      "options": {
-        "baseURL": "https://api.nan.builders/v1",
-        "apiKey": "{env:NAN_API_KEY}"
-      },
-      "models": {
-        "qwen3.6": {
-          "name": "NaN — qwen3.6",
-          "limit": { "context": 262144, "output": 32768 },
-          "attachment": true,
-          "modalities": { "input": ["text", "image"], "output": ["text"] }
-        },
-        "deepseek-v4-flash": {
-          "name": "NaN — deepseek-v4-flash",
-          "limit": { "context": 1000000, "output": 32768 }
-        },
-        "mimo-v2.5": {
-          "name": "NaN — mimo-v2.5",
-          "limit": { "context": 1000000, "output": 32768 },
-          "attachment": true,
-          "modalities": { "input": ["text", "image"], "output": ["text"] }
-        },
-        "gemma4": {
-          "name": "NaN — gemma4",
-          "limit": { "context": 262144, "output": 32768 },
-          "attachment": true,
-          "modalities": { "input": ["text", "image"], "output": ["text"] }
-        }
-      }
-    }
-  }
-}
-```
-
-**NaN API** (`api.nan.builders`): OpenAI-compatible proxy for qwen3.6, deepseek-v4-flash, mimo-v2.5, gemma4. NaN is the only enabled provider (`enabled_providers: ["nan"]`); the default model is `nan/deepseek-v4-flash` and the cheap `small_model` is `nan/qwen3.6`. Get a key at https://nan.builders.
-
-**Permissions:** `permission.bash` allows all commands by default but hard-denies destructive ones (`rm -rf /`, force pushes, `git reset --hard`, `terraform destroy`/`force-unlock`, `kubectl delete namespace`). `permission.skill` denies three oh-my-openagent skills (`terraform-devops`, `incident-triage`, `spec-first`) so they are not auto-invoked.
-
-**Engram MCP server (`mcp.engram`):** Registers Engram (Section 8) as a local MCP server — opencode launches `engram mcp --tools=agent`, which exposes the `mem_*` tools for persistent cross-session memory (recall and save). Engram runs locally on SQLite with no model provider.
+- **Providers:** `enabled_providers: ["nan", "anthropic"]`. `provider.nan` points at `https://api.nan.builders/v1` with `apiKey: "{env:NAN_API_KEY}"` (an env reference, never the value). `provider.anthropic` carries a `whitelist` of exactly `claude-opus-5` and `claude-sonnet-5`, each with `limit.output: 8192`; the key lives only in `~/.local/share/opencode/auth.json` (mode 600).
+- **Models:** `deepseek-v4-flash` (1M context, text+image), `glm5.3-flash` (text+image), `mimo-v2.5` (text+audio), plus catalog-only `gemma4` and `qwen3.6` (text+image). **Effort aliases** `deepseek-v4-flash-low`, `deepseek-v4-flash-none`, `glm5.3-flash-low`, `glm5.3-flash-high` share the upstream `id` and carry `options.nanReasoningEffort`; the `harness-guards.js` plugin copies that into `reasoningEffort` after oh-my-openagent's own resolver (which rewrites or deletes the field). `model` = `nan/deepseek-v4-flash-low`, `small_model` = `nan/deepseek-v4-flash-none`.
+- **Permissions:** `permission.bash` allows everything except the catastrophic denylist (`rm -rf` of `/` or the home directory, force pushes, `git reset --hard`, `git clean -fd`, `terraform destroy`/`force-unlock`, `kubectl delete namespace`). Rules are evaluated last-match-wins, so agent files must never carry a flat `bash: allow` (the checker fails on it).
+- **Compaction:** `compaction.reserved: 50000`. **Engram MCP** (`mcp.engram`, `engram mcp --tools=agent`) and the Playwright MCP are registered as in Section 6.7 and Section 8.
 
 ### 6.3 oh-my-openagent Config
 
 File: `~/.config/opencode/oh-my-openagent.json`
 
-**Model strategy (NaN-only):** Every agent and category runs on `nan/*` models. There are no Claude or GPT models here — NaN is the only provider.
-- `nan/qwen3.6` — fast/cheap default, high-volume work: explore, librarian, atlas, sisyphus-junior, quick/writing/artistry categories
-- `nan/deepseek-v4-flash` — orchestration and planning: sisyphus, prometheus, metis, plus the deep/unspecified-high categories
-- `nan/mimo-v2.5` — deep reasoning, review, and multimodal: oracle, momus, multimodal-looker, plus the visual-engineering/ultrabrain categories
-- `nan/gemma4` — low-cost fallback for the qwen3.6 tier
+**Model strategy (NaN first, Claude on two review seats):** every oh-my-openagent agent and category runs on `nan/deepseek-v4-flash-low` with `nan/glm5.3-flash-low` as the only fallback (both 1M context; benchmark 2026-09-21 on 73 items built from this owner's incidents: deepseek low 66.3/73, glm high 64.7, glm low 61.7, then qwen3.6 54, gemma4 53, mimo 48). Custom agents (Section 6.6): `critic` on `anthropic/claude-sonnet-5`, `plan-critic` on `anthropic/claude-opus-5`, `fact-checker` on `nan/glm5.3-flash-high`, everything else `nan/deepseek-v4-flash-low`. `providerConcurrency` is `nan: 6`, `anthropic: 1`. `reasoningEffort` must not appear in this file (the checker fails on it) — effort comes from the model aliases above.
 
 > **`hephaestus` is disabled** via `disabled_agents: ["hephaestus"]` — it is not part of this configuration.
 
@@ -1860,7 +1765,7 @@ The "council" is a multi-lens adversarial review run entirely on NaN models:
 | Planning gap check | Metis (nan/deepseek-v4-flash) | Identifies what's missing before commitment |
 | `/hyperplan` | Multiple adversarial critics | Major architectural decisions |
 | `ultrawork` or `ulw` in prompt | Full agent team | Parallel orchestration across all agents |
-| `/council` (custom) | critic (nan/mimo-v2.5) + fact-checker (nan/deepseek-v4-flash) | Multi-lens critique plus citation-checked fact verification (see Section 6.6) |
+| `/council` (custom) | `@critic` (Claude Sonnet 5, once) + `@fact-checker` (nan/glm5.3-flash-high) + `@thermo-nuclear-review` (NaN) for high-risk targets | Multi-lens critique plus citation-checked fact verification (see Section 6.6) |
 
 ### 6.4 TUI and Legacy Config
 
@@ -1897,7 +1802,7 @@ opencode agent list | grep -E "^[A-Za-z].*\(primary|subagent\)"
 
 opencode debug agent "Sisyphus - ultraworker" | python3 -c \
   "import sys,json; d=json.load(sys.stdin); print('model:', d.get('model'))"
-# Expected: model: {'providerID': 'nan', 'modelID': 'deepseek-v4-flash'}
+# Expected: model: {'providerID': 'nan', 'modelID': 'deepseek-v4-flash-low'}
 ```
 
 ---
@@ -1906,12 +1811,11 @@ opencode debug agent "Sisyphus - ultraworker" | python3 -c \
 
 This repo also stores the portable instruction file and the opencode custom agents/commands.
 
-**Shared `AGENTS.md` (repo root)** — portable engineering standards that work with any model. It must be copied byte-identical to **both** opencode and Zed:
+**Shared `AGENTS.md` (repo root)** — portable engineering standards that work with any model:
 ```bash
 cp AGENTS.md ~/.config/opencode/AGENTS.md
-cp AGENTS.md ~/.config/zed/AGENTS.md
 ```
-Edit the two installed copies together — they are meant to stay identical, and project-level instruction files override them where they conflict. `AGENTS.md` documents the NaN-only model policy, a non-negotiable **anti-hallucination policy** (tests are the terminal proof of done; verify-before-asserting against official docs; cite or abstain; never auto-install fabricated packages; gate on external signals, not self-confidence), and a **Memory (Engram)** policy: recall-first at task start (treating recalled memory as possibly-outdated prior context), save only verified learnings (`mem_save` gated on an external signal), and never save secrets.
+Project-level instruction files override it where they conflict. `AGENTS.md` documents the model policy (NaN first; Claude only on `@critic`/`@plan-critic`, each reply ending with its closing block), the delegation rule (never send questions or research to the Claude seats), a non-negotiable **anti-hallucination policy** (tests are the terminal proof of done; verify-before-asserting against official docs; cite or abstain; never auto-install fabricated packages; gate on external signals, not self-confidence), and a **Memory (Engram)** policy: recall-first at task start (treating recalled memory as possibly-outdated prior context), save only verified learnings (`mem_save` gated on an external signal), and never save secrets.
 
 **opencode custom agents (`opencode-agents/`)** → install to `~/.config/opencode/agents/`:
 ```bash
@@ -1921,8 +1825,13 @@ cp opencode-agents/*.md ~/.config/opencode/agents/
 
 | Agent | Model | Role |
 |---|---|---|
-| `critic` | nan/mimo-v2.5 | Adversarial, read-only reviewer of any output, plan, claim, diff, or decision. Invoke via `@critic` or `/council`. |
-| `fact-checker` | nan/deepseek-v4-flash | Extracts falsifiable claims and verifies each against primary sources (context7, then web); returns supported / refuted / unverifiable with citations. Invoke via `@fact-checker` or `/council`. |
+| `critic` | anthropic/claude-sonnet-5 (variant low, 8192 cap) | Adversarial, read-only reviewer for `/council`, `/verify`, `/best-of` or an explicit review request. Ends with a JSON verdict block. |
+| `plan-critic` | anthropic/claude-opus-5 (variant low, 8192 cap, `maxSteps: 6`) | Reviews plans that touch production, auth/IAM, data or multiple accounts. Ends with the line `Review complete.` |
+| `thermo-nuclear-review` | nan/deepseek-v4-flash-low | Independent second seat: strict code-quality rubric in diff mode, all council lenses in target mode. No bash. Ends with a lone SHIP/REVISE/BLOCK line. |
+| `fact-checker` | nan/glm5.3-flash-high | Extracts falsifiable claims and verifies them against primary sources; ends with a JSON block. |
+| 11 domain agents + `lead`, `code-quality`, `security`, `cost`, `design`, `doc-reviewer` | nan/deepseek-v4-flash-low | Same roles as the Claude Code agents, on NaN. |
+
+The `harness-guards.js` plugin rejects any other agent/model pair on Anthropic before a token is billed and writes `maxOutputTokens: 8192` plus `effort: low` into every Claude request (verified on the wire 2026-09-21).
 
 **opencode commands (`opencode-commands/`)** → install to `~/.config/opencode/commands/`:
 ```bash
@@ -1941,7 +1850,7 @@ cp opencode-commands/*.md ~/.config/opencode/commands/
 
 ### 6.7 Harness Checker, Browser/E2E, and Vision
 
-**Harness checker (`opencode-scripts/check-harness.mjs`)** — a static, offline validator (no model calls, NaN-safe) that enforces the harness invariants: NaN-only model refs, `AGENTS.md` byte-parity (opencode == Zed), the bash denylist, Engram wiring, model context windows, custom agent/command frontmatter, an exact-version plugin pin (never `@latest` — see Section 6.1), and the `~/.agents/skills` inventory (unknown or missing skills fail; adding a skill means deliberately updating `EXPECTED_SKILLS` in the checker). Install and run:
+**Harness checker (`opencode-scripts/check-harness.mjs`)** — a validator (no model calls) that enforces the harness invariants: the exact role map (every omo agent/category on deepseek-low with the glm-low fallback; the three custom-agent exceptions), the Anthropic whitelist and 8192 caps, `variant: low` and denied bash/edit/task on both Claude seats, no flat `bash: allow` and no inert `write:` key in any agent (it parses frontmatter with YAML and asks `opencode debug agent <name> --pure` for the resolved tools and bash ruleset), the plugin's unit tests, an exact-version plugin pin, a secret-shape scan, and the `~/.agents/skills` inventory. It also applies the agent policy to this repo's `opencode-agents/` mirror, since `install.sh` copies it back into the live config. Install and run:
 ```bash
 mkdir -p ~/.config/opencode/scripts
 cp opencode-scripts/check-harness.mjs ~/.config/opencode/scripts/
@@ -1950,207 +1859,63 @@ node ~/.config/opencode/scripts/check-harness.mjs --json   # machine-readable
 ```
 It is wired in as **Stage 1 of `/smoke`**, so a `/smoke` run validates config invariants before checking liveness.
 
-**Browser / E2E (Playwright MCP)** — `opencode.jsonc` registers the official Playwright MCP (`mcp.playwright`, Section 6.2), giving the agent `browser_navigate / click / snapshot / screenshot` tools. It launches `npx @playwright/mcp@0.0.77 --headless` (auto-installed on first use) and reuses an installed Chromium. For authoring/running Playwright E2E scripts, the `webapp-testing` skill — with its `scripts/with_server.py` server-lifecycle helper (vendored under `zed-skills/webapp-testing/scripts/`) — runs via bash; that path needs the Python `playwright` package and Chromium:
+**Browser / E2E (Playwright MCP)** — `opencode.jsonc` registers the official Playwright MCP (`mcp.playwright`, Section 6.2), giving the agent `browser_navigate / click / snapshot / screenshot` tools. It launches `npx @playwright/mcp@0.0.77 --headless` (auto-installed on first use) and reuses an installed Chromium. For authoring/running Playwright E2E scripts, the `webapp-testing` skill — with its `scripts/with_server.py` server-lifecycle helper (vendored under `agents-skills/webapp-testing/scripts/`) — runs via bash; that path needs the Python `playwright` package and Chromium:
 ```bash
 pip install playwright && python -m playwright install chromium
 ```
 
-**Vision routing (important):** browser screenshots are images, and only the vision-capable NaN models can read them. `opencode.jsonc` declares `attachment: true` + image `modalities` on `qwen3.6`, `mimo-v2.5`, and `gemma4` (Section 6.2); `deepseek-v4-flash` is text-only. Route any screenshot/visual verification to a vision model (e.g. `opencode run -m nan/mimo-v2.5 …`) — deepseek will fabricate image descriptions. `AGENTS.md` carries this as an anti-hallucination rule, and `browser_snapshot` (accessibility text) works on any model for DOM interaction.
+**Vision routing (important):** browser screenshots are images. In `config/opencode.jsonc` the models with image input are `deepseek-v4-flash` (all effort aliases), `glm5.3-flash`, `gemma4` and `qwen3.6`; `mimo-v2.5` is wired for **audio** only and must not receive screenshots. The default `nan/deepseek-v4-flash-low` therefore handles vision (benchmark 2026-09-21: 2/2 on the vision items at effort low). `AGENTS.md` carries this as an anti-hallucination rule, and `browser_snapshot` (accessibility text) works on any model for DOM interaction.
 
 ---
 
-## 7. Zed IDE
+## 7. pi coding agent + gentle-pi
 
-Zed is the primary code editor. Its AI Agent panel has a **skills system** (`~/.agents/skills/`) — reusable instruction packages the agent auto-invokes based on context. Skills are plain Markdown, work with any model, and complement the Claude Code agent system (they are completely separate). For structured DevOps workflows use Claude Code; for autonomous multi-step coding use opencode; use Zed for fast inline editing and its AI panel with the skills below.
+[pi](https://pi.dev) is a small terminal coding agent; [gentle-pi](https://pi.dev/packages/gentle-pi) adds the ODD/SDD workflow, packaged subagents and a native review flow. Here it mirrors the opencode policy: NaN by default at thinking low, Claude only on gentle-pi's review lenses at effort low with an 8192-token cap. Verified live on 2026-09-21 (wire-recorded requests, guard tests, a 14-item harness slice: pi 26/28 vs opencode 26/28 over two runs).
 
 ### 7.1 Installation
 
-macOS: `brew install --cask zed` or https://zed.dev
+```bash
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent   # pi 0.87.x, Node >= 22.19 (Section 3.3)
+brew install gentleman-programming/tap/gentle-ai                    # 3.4.x, configurator for gentle-pi (Linux: release binary from its GitHub repo)
+pi install npm:gentle-pi                                            # then: gentle-ai sync --agents pi
+```
 
-Linux: `curl -f https://zed.dev/install.sh | sh`
+`gentle-ai sync` writes its SDD skills into the **shared** `~/.agents/skills`, which opencode also loads. Move them to `~/.pi/agent/skills/` afterwards: `install.sh` does this on every run from the list in [`pi/gentle-skills.txt`](pi/gentle-skills.txt), the sync script excludes those names from `agents-skills/`, and `check-pi-harness.mjs` fails if they leak back. The native review flow refuses to run until the sync was done by the gentle-ai version the package bundles (`managed_assets_outdated`).
+
+Headless use: `pi -p --no-session --mode json "<prompt>" < /dev/null` — pi (and `codex exec`) hang on an open stdin.
 
 ### 7.2 Config
 
-File: `~/.config/zed/settings.json`
-
-```json
-{
-  "proxy": "",
-  "theme": {
-    "mode": "dark",
-    "light": "One Light",
-    "dark": "One Dark"
-  },
-  "session": {
-    "trust_all_worktrees": true
-  },
-  "agent": {
-    "tool_permissions": {
-      "tools": {
-        "terminal": {
-          "default": "allow"
-        },
-        "fetch": {
-          "always_allow": [
-            {
-              "pattern": "^https?://docs\\.docker\\.com"
-            }
-          ]
-        }
-      }
-    },
-    "default_model": {
-      "provider": "nan",
-      "model": "deepseek-v4-flash"
-    },
-    "commit_message_model": {
-      "provider": "nan",
-      "model": "qwen3.6"
-    },
-    "thread_summary_model": {
-      "provider": "nan",
-      "model": "qwen3.6"
-    },
-    "subagent_model": {
-      "provider": "nan",
-      "model": "deepseek-v4-flash"
-    },
-    "favorite_models": [
-      { "provider": "nan", "model": "deepseek-v4-flash" },
-      { "provider": "nan", "model": "mimo-v2.5" },
-      { "provider": "nan", "model": "gemma4" }
-    ],
-    "model_parameters": [
-      { "provider": "nan", "model": "deepseek-v4-flash", "temperature": 0.2 },
-      { "provider": "nan", "model": "mimo-v2.5", "temperature": 0.2 },
-      { "provider": "nan", "model": "qwen3.6", "temperature": 0.6 },
-      { "provider": "nan", "model": "gemma4", "temperature": 1.0 }
-    ]
-  },
-  "language_models": {
-    "openai_compatible": {
-      "nan": {
-        "api_url": "https://api.nan.builders/v1",
-        "available_models": [
-          {
-            "name": "qwen3.6",
-            "display_name": "NaN — qwen3.6 (primary)",
-            "max_tokens": 262144,
-            "capabilities": {
-              "tools": true,
-              "images": true,
-              "parallel_tool_calls": false,
-              "prompt_cache_key": false,
-              "chat_completions": true
-            }
-          },
-          {
-            "name": "deepseek-v4-flash",
-            "display_name": "NaN — deepseek-v4-flash",
-            "max_tokens": 1000000,
-            "capabilities": {
-              "tools": true,
-              "images": false,
-              "parallel_tool_calls": false,
-              "prompt_cache_key": false,
-              "chat_completions": true
-            }
-          },
-          {
-            "name": "mimo-v2.5",
-            "display_name": "NaN — mimo-v2.5 (multimodal)",
-            "max_tokens": 1000000,
-            "capabilities": {
-              "tools": true,
-              "images": true,
-              "parallel_tool_calls": false,
-              "prompt_cache_key": false,
-              "chat_completions": true
-            }
-          },
-          {
-            "name": "gemma4",
-            "display_name": "NaN — gemma4",
-            "max_tokens": 262144,
-            "capabilities": {
-              "tools": true,
-              "images": true,
-              "parallel_tool_calls": false,
-              "prompt_cache_key": false,
-              "chat_completions": true
-            }
-          }
-        ]
-      }
-    }
-  },
-  "edit_predictions": {
-    "provider": "open_ai_compatible_api",
-    "open_ai_compatible_api": {
-      "api_url": "https://api.nan.builders/v1/completions",
-      "model": "qwen3.6",
-      "prompt_format": "infer",
-      "max_output_tokens": 512
-    }
-  },
-  "context_servers": {
-    "engram": {
-      "command": "/opt/homebrew/bin/engram",
-      "args": ["mcp", "--tools=agent"],
-      "env": {}
-    }
-  }
-}
-```
-
-The provider is a custom `nan` entry under `language_models.openai_compatible` (not Zed's built-in OpenAI or Anthropic providers — those are removed). After writing this file, add the NaN API key in Zed's UI: open Zed → `Cmd+,` (macOS) or `Ctrl+,` (Linux) → AI / Language Models → find the `nan` (OpenAI-compatible) provider → set the API key to your `NAN_API_KEY` value.
-
-> **Engram in Zed:** The `context_servers.engram` block registers Engram (Section 8) as a Zed context server. It launches `engram mcp --tools=agent`, which provides the `mem_*` tools (persistent cross-session memory) inside Zed's AI panel. On Linux, change the `command` path from `/opt/homebrew/bin/engram` to wherever `engram` is installed (`which engram`).
-
-### 7.3 Zed Skills
-
-Skills live in `~/.agents/skills/<name>/SKILL.md` (global, all projects) or `<project>/.agents/skills/<name>/SKILL.md` (project-local). The agent auto-discovers them and selects them by matching task context to the skill's `description`. You can also invoke manually with `/skill-name` or `@skill-name` in the agent panel.
-
-**Install the skills from this repo:**
-
-Each skill in `zed-skills/` is already a folder containing `SKILL.md` — just copy them:
-
+All files vendored under [`pi/`](pi/); place them with:
 ```bash
-mkdir -p ~/.agents/skills
-cp -r zed-skills/* ~/.agents/skills/
+mkdir -p ~/.pi/agent/extensions ~/.pi/agent/scripts ~/.pi/gentle-ai
+cp pi/models.json pi/settings.json pi/AGENTS.md pi/mcp.json ~/.pi/agent/
+cp pi/gentle-ai-models.json ~/.pi/gentle-ai/models.json
+cp pi/extensions/*.ts ~/.pi/agent/extensions/
+cp pi/scripts/*.mjs ~/.pi/agent/scripts/
 ```
 
-That's it. Zed auto-discovers all subfolders of `~/.agents/skills/` on next launch.
+- `models.json`: provider `nan` (`api: openai-completions`, `apiKey: "$NAN_API_KEY"`, `compat.thinkingFormat: reasoning_effort`) with deepseek-v4-flash, glm5.3-flash, mimo-v2.5 (text+image only: a third modality makes pi reject the whole file), gemma4, qwen3.6. Each model maps pi thinking levels to NaN effort via `thinkingLevelMap` (`off → none`, `low → low`, …). The built-in `anthropic` provider stays, with `modelOverrides` capping `claude-sonnet-5` and `claude-opus-5` at `maxTokens: 8192`.
+- `settings.json`: default `nan/deepseek-v4-flash`, `defaultThinkingLevel: low`, `modelThinkingLevels` low for both Claude ids, `enabledModels` limited to `nan/*` plus the two Claude ids, `packages: ["npm:gentle-pi", "npm:pi-mcp-adapter"]`.
+- `AGENTS.md`: the opencode standards ported to pi, plus a Language rule (gentle-pi's persona prompt made deepseek answer English prompts in Spanish).
+- `mcp.json`: context7 through `pi-mcp-adapter`. `gentle-ai-models.json` → `~/.pi/gentle-ai/models.json`: per-agent routing, `review-*` lenses on `anthropic/claude-sonnet-5` at thinking low, `jd-judge-b` on `nan/glm5.3-flash` high (second model family), everything else `nan/deepseek-v4-flash` low. gentle-pi materializes it into `~/.pi/agent/subagents.json` on the next launch.
+- The Anthropic key goes in `~/.pi/agent/auth.json` (mode 600, `{"anthropic": {"type": "api_key", "key": "..."}}`) and is never vendored.
 
-**Installed skills (all 12 are vendored in `zed-skills/`):**
+### 7.3 Guard extension and checker
 
-| Skill | Auto-invoked when... |
-|-------|---------------------|
-| `algorithmic-art` | Generating generative/algorithmic art or creative-coding visuals |
-| `canvas-design` | Designing on an HTML canvas or working with 2D canvas graphics |
-| `computer-use` | Driving a computer/GUI via screenshots and synthetic input |
-| `find-skills` | Discovering which installed skill fits the current task |
-| `frontend-design` | Building production-grade frontend components, pages, or apps |
-| `incident-triage` | Investigating outages, errors, or security alerts |
-| `k8s-debug` | Diagnosing pod failures, ArgoCD sync issues, HPA problems |
-| `karpathy-guidelines` | Writing, reviewing, or refactoring code |
-| `orca-cli` | Working with the orca CLI / agent-hooks workflow |
-| `skill-creator` | Creating, editing, or validating new skills |
-| `spec-first` | Planning a non-trivial code or infra change |
-| `terraform-devops` | Working with `.tf` files or planning infra changes |
-| `validating-packages` | Confirming a dependency exists in its registry before adding it |
-| `verifying-changes` | Verifying a change actually works before claiming it is done |
-| `webapp-testing` | Testing or debugging a local web app via a headless browser |
+pi has no permission system, so [`pi/extensions/harness-guards.ts`](pi/extensions/harness-guards.ts) (installed to `~/.pi/agent/extensions/`) blocks through the `tool_call` hook: the catastrophic bash denylist across ordinary spellings (global options, split flags, `env`/`sudo`/absolute paths), any read or write of secret and state files (`.env*`, `*.tfstate`, `*.pem`, `*.key`, `id_rsa*`, `auth.json`, `secrets/`) through bash or the file tools, `pi auth` (prints keys), nested `pi --no-extensions`, and gentle-pi's `gentle_review_capture_group` (runs every lens concurrently). It also fences the session model: on session start, model selection, input and before each turn, an Anthropic session model is switched back to NaN, and it fails closed (the input is swallowed) when NaN auth is missing. `pi --no-extensions` disables all of this; it is a policy guard, not a security boundary.
 
-**Verify installation:**
+[`pi/scripts/check-pi-harness.mjs`](pi/scripts/check-pi-harness.mjs) (installed to `~/.pi/agent/scripts/`, run with `node ~/.pi/agent/scripts/check-pi-harness.mjs`) validates the config, the routing, the materialized profiles, forbids an Anthropic `baseUrl` override, and runs [`test-pi-guards.mjs`](pi/scripts/test-pi-guards.mjs) (`node --experimental-strip-types`), which imports the extension with a fake ExtensionAPI and asserts about 70 decisions.
 
-Zed → `Cmd+,` → AI → Skills → User tab — all 15 skills should appear.
+### 7.4 gentle-pi
+
+Agents shipped: `gentle-ai-explore/verify/worker`, `jd-*`, four `review-*` lenses, `sdd-*`. Subagents run as `pi --mode rpc` children with the routed model; review lenses run in-process through the review relay with their own routed model. The native review (`/gentle:review-mode enable`, then `gentle_review inspect → start → consent → capture`) needs a human consent answer per candidate and shows findings as ids and severities only. On the same unsafe Django migration, opencode's `/verify` and `/council` returned BLOCK with the real blockers while gentle-pi's review approved it with informational findings, so **opencode remains the primary harness; pi is the cheaper secondary** for exploration and implementation. Slash commands (`/gentle:status`, `/gentle:doctor`, `/gentle:usage`) work only in the interactive TUI.
 
 ---
 
 ## 8. Engram (Persistent Memory)
 
-Engram is a local, third-party persistent-memory store for AI agents. It backs **all three** tools in this setup, giving them a shared, recallable long-term memory via the `mem_*` MCP tools.
+Engram is a local, third-party persistent-memory store for AI agents. It backs opencode in this setup, giving them a shared, recallable long-term memory via the `mem_*` MCP tools.
 
 ### 8.1 What it is
 
@@ -2165,19 +1930,19 @@ brew install gentleman-programming/tap/engram
 
 This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary installs to `/opt/homebrew/bin/engram` on Apple Silicon macOS. The same tap also ships `gentle-ai` (`brew install gentleman-programming/tap/gentle-ai`).
 
-> **Linux note:** these configs assume the macOS Homebrew prefix `/opt/homebrew`, but the engram path is resolved dynamically — `install.sh` sets the Zed `context_servers.engram.command` from `command -v engram`. For a manual install on Linux, just ensure `engram` is on `PATH`.
+> **Linux note:** these configs assume the macOS Homebrew prefix `/opt/homebrew`, but the engram path is resolved dynamically — opencode launches it by name (`engram mcp --tools=agent`). For a manual install on Linux, just ensure `engram` is on `PATH`.
 
 ### 8.3 What it backs
 
 | Tool | Wiring | File |
 |---|---|---|
 | opencode | `mcp.engram` MCP server (`engram mcp --tools=agent`) | `~/.config/opencode/opencode.jsonc` |
-| Zed | `context_servers.engram` context server | `~/.config/zed/settings.json` |
+| pi | none by default — gentle-pi lists `gentle-engram` as an optional companion package | — |
 | Claude Code | none — the vendored Claude setup is Engram-free by design (Section 5.7 Claude-only policy) | — |
 
 ### 8.4 Shared memory policy (AGENTS.md)
 
-The shared `AGENTS.md` (Section 6.6) defines the **"Memory (Engram)"** policy that opencode and Zed follow:
+The shared `AGENTS.md` (Section 6.6) defines the **"Memory (Engram)"** policy that opencode follows (pi's `AGENTS.md` carries the same wording):
 - **Recall first** — at the start of a non-trivial task, search memory for prior decisions/gotchas/conventions, treating results as prior context that may be outdated and verifying before acting on them.
 - **Save only verified learnings** — call `mem_save` only when a learning is backed by an external signal (tests passed, a doc confirmed it, a command/`file:line` verified it, or the user confirmed it), and record that evidence in the saved memory.
 - **Never save secrets** — no keys, tokens, passwords, or `.env` contents.
@@ -2340,6 +2105,19 @@ opencode agent list      # List all agents
 /start-work              # Prometheus spec-first interview
 /hyperplan               # 5 adversarial critics on a plan
 ultrawork                # (in any prompt) Full parallel orchestration
+/council <target>        # one Claude critic + fact-checker (+ NaN thermo seat for high-risk)
+/verify                  # tests/lint/build + blind critic review -> SHIP/REVISE/BLOCK/INCONCLUSIVE
+/smoke                   # harness self-test
+```
+
+### pi / Herdr
+
+```bash
+pi                                        # interactive (gentle shell)
+pi -p --no-session --mode json "task" </dev/null
+node ~/.pi/agent/scripts/check-pi-harness.mjs
+herdr                                     # attach the persistent session
+herdr agent list                          # agents running in panes and their state
 ```
 
 ### Model Selection Guide
@@ -2349,10 +2127,11 @@ ultrawork                # (in any prompt) Full parallel orchestration
 | Architecture / planning | Claude Code | opus[1m] (Opus, 1M context) |
 | Code implementation | Claude Code | sonnet / opus[1m] |
 | Security/cost review | Claude Code | haiku (advisory agents) |
-| Fast codebase search | opencode | nan/qwen3.6 (explore) |
-| Orchestration / deep work | opencode | nan/deepseek-v4-flash (sisyphus, deep) |
-| Plan review (critical) | opencode | nan/mimo-v2.5 (momus) |
-| Zed inline editing | Zed | nan/qwen3.6 (NaN) |
+| Orchestration, search, execution | opencode | nan/deepseek-v4-flash-low (fallback glm5.3-flash-low) |
+| Adversarial review / plan review | opencode | anthropic/claude-sonnet-5 (`@critic`) / claude-opus-5 (`@plan-critic`), effort low, 8k cap |
+| Fact checking | opencode | nan/glm5.3-flash-high (`@fact-checker`) |
+| Cheaper NaN sessions | pi | nan/deepseek-v4-flash at thinking low; review lenses on Claude Sonnet 5 |
+| Blind second-opinion reviews | Codex CLI / Cursor CLI | gpt-5.6-sol high / auto |
 
 ---
 
@@ -2362,7 +2141,7 @@ Copy this list and check off each item:
 
 **System**
 - [ ] Homebrew / apt / dnf configured
-- [ ] Node 20 on PATH (`node --version` → v20.x.x)
+- [ ] Node 22 on PATH (`node --version` → v22.x.x; pi requires >= 22.19)
 - [ ] Bun installed (`~/.bun/bin/bun`)
 - [ ] `gh` authenticated (`gh auth status`)
 - [ ] AWS CLI configured
@@ -2375,12 +2154,12 @@ Copy this list and check off each item:
 - [ ] `~/.claude/CLAUDE.md` created
 - [ ] `~/.claude/settings.json` created (model `opus[1m]`)
 - [ ] `~/.claude/agents/` populated (18 agent files, incl. `doc-reviewer`)
-- [ ] `~/.claude/skills/` populated
+- [ ] `~/.claude/skills/` populated (incl. `herdr` and `dagr-producer`)
 - [ ] `~/.claude/rules/` created
 - [ ] `~/.claude/hooks/auto-sync.sh` created and executable
 - [ ] `~/.claude/settings.local.json` created (permission allowlist)
 
-**Engram** (opencode/Zed only — the Claude Code setup is Engram-free)
+**Engram** (opencode only — the Claude Code setup is Engram-free)
 - [ ] Installed (`engram --version` → 1.16.x)
 - [ ] DB exists at `~/.engram/engram.db`
 
@@ -2392,22 +2171,33 @@ Copy this list and check off each item:
 - [ ] Installed via brew tap (`brew install anomalyco/tap/opencode`)
 - [ ] `NAN_API_KEY` set (no OpenCode Zen subscription needed)
 - [ ] oh-my-openagent in plugin cache
-- [ ] `~/.config/opencode/opencode.jsonc` created (NaN-only, `mcp.engram` enabled)
-- [ ] `~/.config/opencode/oh-my-openagent.json` created (NaN-only, hephaestus disabled)
-- [ ] `~/.config/opencode/AGENTS.md` (byte-identical to repo `AGENTS.md`)
-- [ ] `~/.config/opencode/agents/` populated (critic, fact-checker)
-- [ ] `~/.config/opencode/commands/` populated (council, verify, smoke)
+- [ ] `~/.config/opencode/opencode.jsonc` created (nan + anthropic whitelist, `mcp.engram` enabled)
+- [ ] `~/.config/opencode/oh-my-openagent.json` created (deepseek-low everywhere, hephaestus disabled)
+- [ ] `~/.config/opencode/AGENTS.md` (identical to repo `AGENTS.md`)
+- [ ] `~/.config/opencode/agents/` populated (21 agents; critic and plan-critic on Claude)
+- [ ] `~/.config/opencode/commands/` populated (council, verify, best-of, smoke)
+- [ ] `~/.local/share/opencode/auth.json` holds the Anthropic key (mode 600)
+- [ ] `node ~/.config/opencode/scripts/check-harness.mjs` passes
 - [ ] `~/.config/opencode/tui.json` created (empty plugins)
 - [ ] `~/.opencode/opencode.json` created (empty plugins)
 - [ ] Verification: `opencode debug info` shows only `oh-my-openagent@4.16.1` (exact pin)
 
-**Zed**
-- [ ] Installed
-- [ ] `~/.config/zed/settings.json` created (NaN openai_compatible, engram context server)
-- [ ] `~/.config/zed/AGENTS.md` (byte-identical to repo `AGENTS.md`)
-- [ ] NaN API key set in Zed settings UI (the `nan` provider)
-- [ ] Zed skills installed: `ls ~/.agents/skills/` → shows 15 skill folders
-- [ ] Skills visible in Zed → Settings → AI → Skills → User tab
+**pi + gentle-pi**
+- [ ] `pi --version` (0.87.x) and `gentle-ai --version` (3.4.x)
+- [ ] `~/.pi/agent/{models.json,settings.json,AGENTS.md,mcp.json}` placed; `~/.pi/agent/auth.json` written (mode 600)
+- [ ] `pi install npm:gentle-pi` done, `gentle-ai sync --agents pi` run, SDD skills moved to `~/.pi/agent/skills/`
+- [ ] `node ~/.pi/agent/scripts/check-pi-harness.mjs` passes
+- [ ] `pi -p --no-session "Reply OK" </dev/null` answers on nan/deepseek-v4-flash
+
+**Herdr**
+- [ ] `herdr --version` (0.9.x); `herdr` started once
+- [ ] Plugins from `herdr/plugins.txt` installed (`herdr plugin list`)
+- [ ] Integrations from `herdr/integrations.txt` installed (`herdr integration status`)
+- [ ] `dagr --version` works (symlink to the herdr-dagr plugin binary)
+
+**Codex CLI**
+- [ ] `codex --version`; `codex login` done
+- [ ] `~/.codex/AGENTS.md` placed; `config.toml` compared with `codex/config.toml`
 
 **Terminal Tools**
 - [ ] `fzf` installed and CTRL-R works in terminal
@@ -2510,9 +2300,9 @@ git diff                              # review EVERY change before committing
 
 What it does:
 
-1. Stages the live config (Claude Code agents/skills/hooks/rules/CLAUDE.md/settings, opencode agents/commands/plugins/scripts/configs, Zed settings + shared AGENTS.md, `~/.agents/skills`) into a temp dir. The live side is never modified.
-2. Templatizes machine paths (`$HOME` → `__HOME__`, engram binary → `__ENGRAM__`) before sanitizing.
-3. Applies the sanitize map, then enforces hard gates: zero sanitize-map tokens in content or file names, zero secret-shaped strings, AGENTS.md byte-parity between the opencode and Zed copies. Any failure aborts with the repo untouched and the staging dir kept for inspection.
+1. Stages the live config (Claude Code agents/skills/hooks/rules/CLAUDE.md/settings, opencode agents/commands/plugins/scripts/configs + AGENTS.md, `~/.agents/skills` as `agents-skills/`, pi configs/extension/scripts and gentle-pi routing as `pi/`, a curated Codex `config.toml` plus AGENTS.md and hooks as `codex/`, Herdr plugin and integration manifests as `herdr/`) into a temp dir. The live side is never modified. Files that tools install themselves (Herdr hooks/plugins, gentle-ai synced skills, Claude's `skills/synced` cache) are excluded; pi, codex and herdr are staged all-or-nothing and skipped when the tool is absent.
+2. Templatizes machine paths (`$HOME` → `__HOME__`) before sanitizing.
+3. Applies the sanitize map, then enforces hard gates: zero sanitize-map tokens in content or file names, zero secret-shaped strings. Any failure aborts with the repo untouched and the staging dir kept for inspection.
 4. Mirrors the staging tree into the repo working tree. Protected files (`agents/airbyte.md`, `skills/scalr-deploy/SKILL.md`) keep the repo version — they carry intentional `REQUIRES SECRET` annotations absent from live.
 5. Leaves committing to you. Review the diff, then commit with a single-line message.
 
@@ -2521,6 +2311,27 @@ The sanitize map lives at `~/.config/setup-sync/sanitize-map.txt` and is deliber
 Rules that keep the repo consistent:
 
 - Excluded from sync: memory, session data, logs, caches, backups (`*.bak*`), `node_modules`, `__pycache__`, opencode `package.json`/`package-lock.json`.
-- Claude-only policy: `engram-sync.*` hooks are excluded and their `settings.json` entries stripped — the vendored Claude Code setup must work for teammates who only use Claude Code.
-- If `config/opencode.jsonc` or `config/zed-settings.json` changes, update the inline copies in this README as well (the script prints a reminder).
+- Claude-only policy: `engram-sync.*` and Herdr hooks are excluded and their `settings.json` entries stripped — the vendored Claude Code setup must work for teammates who only use Claude Code (`install.sh` re-adds the Herdr hook through `herdr integration install claude`).
+- This README summarizes configs instead of copying them inline; when `config/opencode.jsonc`, `oh-my-openagent.json`, `pi/` or `codex/` change, re-read the matching section summary (the script prints a reminder).
 - Never hand-copy live files into the repo — always go through the script so sanitization and gates run.
+
+---
+
+## 16. Herdr
+
+[Herdr](https://herdr.dev) is a terminal workspace manager for coding agents: a background server owns the panes, clients attach like tmux, and agents running inside panes show `working` / `blocked` / `done` in a sidebar. Installed 0.9.1 on the live machine (`curl -fsSL https://herdr.dev/install.sh | sh`; update with `herdr update --handoff`, which migrates live panes).
+
+- **Integrations** ([`herdr/integrations.txt`](herdr/integrations.txt), one name per line): `pi` and `opencode` report lifecycle state and session ids through a bundled extension/plugin; `claude`, `codex` and `cursor` report session identity through one `SessionStart` hook each (state still comes from screen detection). Each install adds exactly one hook entry to the respective config (verified by semantic diff). Those files are not vendored; `install.sh` re-runs `herdr integration install <name>` per line.
+- **Plugins** ([`herdr/plugins.txt`](herdr/plugins.txt), tab-separated `owner/repo[/subdir]`, pinned commit, plugin id, enabled state; `install.sh` installs each with `herdr plugin install --ref <commit> <source> --yes` and re-applies the disabled state): herdr-dagr (live DAG of an agent run; the `dagr` binary is symlinked to `~/.local/bin`, the `dagr-producer` skill writes `.dagr/run.json`), hunk (review agent diffs), herdr-nvim, and two tab-naming plugins. `herdr plugin action invoke` acts on the **focused** workspace; focus it first.
+- **Skill**: `skills/herdr/` (from `herdrdev/herdr`) teaches Claude Code and pi to drive panes from inside a Herdr pane (`HERDR_ENV=1`). The rule in `rules/agent-workflows.md` says when to use `herdr agent start/prompt/wait` and `pane run/wait-output` instead of detached shells.
+- Not adopted (2026-09-21): usage/quota plugins. For NaN allowance use `/gentle:usage` in pi or `nan-cli`.
+
+## 17. Codex CLI
+
+Codex CLI (`npm install -g @openai/codex`, `codex login`) is used as a blind adversarial reviewer alongside Cursor CLI (`codex exec --skip-git-repo-check --sandbox read-only -m gpt-5.6-sol -o <file> "<prompt>" </dev/null`). Vendored under [`codex/`](codex/):
+
+- `config.toml` is a **curated** subset generated by the sync script: model `gpt-5.6-sol`, reasoning effort `high`, the plugin enable/disable list (`explanatory-output-style` and `github` disabled as duplicates of the Claude Code plugins), `[features] hooks = true`, memories, and an allowlisted shell environment policy. Marketplace caches, MCP servers bound to the ChatGPT desktop app, per-machine project trust entries and desktop UI state are not vendored; `install.sh` places the curated file only when no `config.toml` exists yet (a known non-converging step, stated in its log line).
+- `AGENTS.md`: the routing section for Claude-only subagents was replaced on 2026-09-21 by a "working alone" section, since Codex has none of those agents.
+- `hooks.json`: Codex hooks, re-placed on every install run (the Herdr `SessionStart` entry is re-created by the integration installer).
+
+Cursor CLI is configured separately (`cursor-agent --model auto`); its `mcp.json` holds plaintext tokens and is deliberately not vendored.
