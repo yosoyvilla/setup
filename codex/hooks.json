@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
     "PostToolUse": [
       {
         "hooks": [
@@ -29,15 +18,6 @@
           }
         ],
         "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
       },
       {
         "hooks": [
@@ -69,15 +49,6 @@
           }
         ],
         "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi",
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
       }
     ],
     "SessionStart": [
@@ -104,27 +75,9 @@
       {
         "hooks": [
           {
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
             "command": "[ ! -f \"__HOME__/.agents/skills/impeccable/scripts/hook.mjs\" ] || node \"__HOME__/.agents/skills/impeccable/scripts/hook.mjs\"",
             "statusMessage": "Design deep pass",
             "timeout": 30,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "command": "if [ -x '__HOME__/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '__HOME__/.orca/agent-hooks/claude-hook.sh'; fi",
             "type": "command"
           }
         ]

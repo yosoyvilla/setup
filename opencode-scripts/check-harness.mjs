@@ -76,7 +76,6 @@ const EXPECTED_SKILLS = new Set([
   // Inventory acknowledged 2026-09-21 (every entry present in ~/.agents/skills at that date).
   "algorithmic-art",
   "canvas-design",
-  "computer-use",
   "dagr-producer",
   "deslop",
   "find-skills",
@@ -90,7 +89,6 @@ const EXPECTED_SKILLS = new Set([
   "karpathy-guidelines",
   "mcp-builder",
   "memex-search",
-  "orca-cli",
   "release",
   "scalr-deploy",
   "skill-creator",

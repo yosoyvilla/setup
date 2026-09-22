@@ -1043,7 +1043,6 @@ File: `~/.claude/settings.json`
 }
 ```
 
-> **orca hooks:** The `/Users/user/.orca/agent-hooks/claude-hook.sh` entries that appear across the Stop, PreToolUse, PostToolUse, UserPromptSubmit, StopFailure, PostToolUseFailure, and PermissionRequest events belong to orca, an external/optional tool installed separately (not part of this repo) — each invocation is guarded by an `[ -x ... ]` check, so if orca is not installed the hook is a no-op.
 
 > **`opus[1m]` model:** Claude Code model selector — Opus with the 1M-token context window. The `[1m]` suffix requests the long-context variant.
 
