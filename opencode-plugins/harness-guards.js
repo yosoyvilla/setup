@@ -8,7 +8,7 @@ import {
   DISABLED, SECRET_RE, DOC_FILE_RE, BROWSER_TOOL_RE, BASH_PROTECTED_RE,
   LOG_DIR, AUDIT_LOG, ABORT_LOG, state, sessionParent,
   classifyEdit, classifyBash, checkGit, obligations, obligationBlock,
-  CLAUDE_SEATS, ANTHROPIC_MAX_OUTPUT, CLAUDE_EFFORT, NAN_EFFORTS,
+  CLAUDE_SEATS, ANTHROPIC_MAX_OUTPUT, CLAUDE_EFFORT, NAN_EFFORTS, prefillRepairMessage,
 } from "../scripts/harness-guards-lib.mjs"
 import fs from "node:fs"
 
@@ -111,6 +111,17 @@ export const HarnessGuards = async ({ client, directory, $ }) => {
           .log({ body: { service: "harness-guards", level: "warn", message: String(err) } })
           .catch(() => {})
       }
+    },
+
+    // Repair a conversation that ends on an assistant turn for our Claude seats.
+    // omo's own guard hardcodes the Claude-4 prefixes, so claude-*-5 slips past
+    // it and Anthropic rejects the request with "does not support assistant
+    // message prefill" (see prefillRepairMessage in harness-guards-lib).
+    "experimental.chat.messages.transform": async (_input, output) => {
+      const messages = output?.messages
+      if (!Array.isArray(messages) || messages.length === 0) return
+      const repair = prefillRepairMessage(messages[messages.length - 1]?.info)
+      if (repair) messages.push(repair)
     },
 
     "experimental.chat.system.transform": async (input, output) => {

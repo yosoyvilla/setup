@@ -92,4 +92,17 @@ t.checkGit(tmp)
 ok(t.state.gitMissing === false, ".git dir clears git obligation")
 fs.rmSync(tmp, { recursive: true, force: true })
 
+// --- assistant-prefill repair (our Claude 5 seats) ---------------------------
+ok(t.isAnthropicPrefillModel("claude-opus-5"), "the opus-5 seat needs the prefill repair")
+ok(t.isAnthropicPrefillModel("claude-sonnet-5"), "the sonnet-5 seat needs the prefill repair")
+ok(!t.isAnthropicPrefillModel("claude-3-5-sonnet-20241022"), "a non-seat Claude model is NOT repaired (false-positive guard)")
+ok(!t.isAnthropicPrefillModel("deepseek-v4-flash-low"), "nan deepseek is NOT repaired")
+ok(t.prefillRepairMessage({ role: "user" }) === null, "no repair when the tail is a user turn")
+ok(t.prefillRepairMessage({ role: "assistant", providerID: "nan", modelID: "deepseek-v4-flash-low" }) === null, "no repair for NaN models")
+const rp = t.prefillRepairMessage({ id: "msg_x", role: "assistant", providerID: "anthropic", modelID: "claude-opus-5", sessionID: "ses_z" })
+ok(rp && rp.info.role === "user", "repair appends a user turn")
+ok(rp.parts.length === 1 && rp.parts[0].text === t.PREFILL_RECOVERY_TEXT, "repair carries the recovery text")
+ok(rp.info.id === "msg_x_prefill_recovery", "repair id derives from the assistant message")
+ok(rp.parts[0].synthetic === true, "repair part is marked synthetic")
+
 console.log(`harness-guards: ${n} assertions passed`)

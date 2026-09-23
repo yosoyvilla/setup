@@ -189,3 +189,59 @@ export const ANTHROPIC_MAX_OUTPUT = 8192
 export const CLAUDE_EFFORT = "low"
 // Effort values NaN accepts (reasoning_effort); carried by model alias options.nanReasoningEffort.
 export const NAN_EFFORTS = new Set(["none", "low", "medium", "high", "max"])
+
+// ── Assistant-prefill repair (Anthropic seats) ──────────────────────────
+// Claude 5 rejects a request whose conversation ends on an assistant turn
+// ("This model does not support assistant message prefill. The conversation must
+// end with a user message."). oh-my-openagent ships a repair
+// (ensureUserTurnAfterAssistantTail) but hardcodes
+//   ASSISTANT_PREFILL_UNSUPPORTED_MODEL_PREFIXES = ["claude-opus-4",
+//     "claude-sonnet-4-6", "claude-mythos"]
+// (verified in oh-my-openagent 4.16.1 dist/index.js, 2026-09-23). Our seats are
+// claude-opus-5 / claude-sonnet-5, which match no prefix, so omo's repair never
+// fires and both seats hard-failed in production (2026-09-21, 2026-09-22). This
+// appends the same synthetic user turn ourselves. NaN requests are untouched.
+export const PREFILL_RECOVERY_TEXT = "[internal] Continue from the previous assistant state."
+
+// Scope the repair to the models we actually bill on Anthropic (the CLAUDE_SEATS
+// values). A broader `claude-*`/provider match would inject a synthetic user turn
+// into any conversation that ends on an assistant message, including models that
+// tolerate prefill; only these seats are verified prefill-unsupported.
+export const ANTHROPIC_PREFILL_MODELS = new Set(
+  [...CLAUDE_SEATS.values()].map((m) => m.toLowerCase()),
+)
+
+export function isAnthropicPrefillModel(modelID) {
+  return ANTHROPIC_PREFILL_MODELS.has(String(modelID ?? "").toLowerCase())
+}
+
+// Returns a synthetic user message to append, or null when no repair is needed.
+export function prefillRepairMessage(info) {
+  if (!info || info.role !== "assistant") return null
+  if (!isAnthropicPrefillModel(info.modelID)) return null
+  const id = `${info.id ?? "assistant"}_prefill_recovery`
+  const sessionID = info.sessionID ?? ""
+  return {
+    info: {
+      id,
+      sessionID,
+      role: "user",
+      time: { created: Date.now() },
+      agent: info.agent ?? "internal",
+      // Match omo's convention: an internal marker, never the failed assistant's
+      // own provider/modelID, so the repair turn is not misattributed as a fresh
+      // Anthropic-billed request by per-provider cost/analytics scans.
+      model: { providerID: "internal", modelID: "assistant-prefill-guard" },
+    },
+    parts: [
+      {
+        id: `${id}_text`,
+        sessionID,
+        messageID: id,
+        type: "text",
+        text: PREFILL_RECOVERY_TEXT,
+        synthetic: true,
+      },
+    ],
+  }
+}

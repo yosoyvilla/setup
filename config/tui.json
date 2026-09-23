@@ -1,5 +1,6 @@
 {
   "plugin": [
-    "oh-my-openagent@4.16.1"
+    "oh-my-openagent@4.16.1",
+    "./herdr-tui-session.js"
   ]
 }
