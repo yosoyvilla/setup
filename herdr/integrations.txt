@@ -1,5 +1,6 @@
 claude
 codex
 cursor
+hermes
 opencode
 pi

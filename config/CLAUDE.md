@@ -114,9 +114,10 @@ Projects live in `~/Documents/` with per-project `.claude/CLAUDE.md` files:
 - `project-a/` - EdTech (EKS, Terraform, large infra)
 - `Personal/` - Side projects (Crewgent, etc.)
 
-Shared rules: `~/.claude/rules/` — all five load into every session by directory glob
-(terraform, kubernetes, security-baseline, go, agent-workflows). `go.md` and
-`agent-workflows.md` were previously loaded but undeclared here.
+Shared rules: `~/.claude/rules/` — the directory glob loads every `*.md` there. It
+currently holds `agent-workflows.md` and `shell-non-interactive.md`; the Terraform,
+Kubernetes, Go and security conventions moved to skills (`terraform-devops`/`terraform-review`,
+`kubernetes-conventions`, `go-conventions`, `security-baseline`).
 
 ## Obsidian Knowledge Base (Source of Truth)
 The canonical documentation for this entire Claude Code setup lives in `~/Documents/obsidian-vault/` (Git: yosoyvilla/obsidian-vault).

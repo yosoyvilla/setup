@@ -104,6 +104,9 @@ const EXPECTED_SKILLS = new Set([
   "verifying-changes",
   "visual-qa",
   "webapp-testing",
+  // Added 2026-09-23: org-wide ops skills (SSM-only remote operations; OpenClaw gateway operations).
+  "ssm-remote-ops",
+  "openclaw-ops",
 ]);
 
 // Protected-file globs that must be denied in permission.edit (path-glob layer

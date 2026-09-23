@@ -24,6 +24,10 @@ import os from "node:os"
 export const DISABLED = process.env.HARNESS_GUARDS_DISABLE === "1"
 export const LOG_DIR = path.join(os.homedir(), ".config", "opencode", "logs")
 export const AUDIT_LOG = path.join(LOG_DIR, "bash-audit.log")
+// Abort/error forensics. Background-task aborts surface as "Session error" with no
+// persisted record of what fired, which made a recurring failure (4 occurrences on
+// 2026-09-23, each after partial application) undiagnosable. Written best-effort.
+export const ABORT_LOG = path.join(LOG_DIR, "abort-forensics.log")
 
 // --- classification ---------------------------------------------------------
 
@@ -60,6 +64,7 @@ export const state = {
   uiEdited: new Set(),
   installs: [],
   gitMissing: false,
+  nestedRepos: [],
   gitChecked: false,
   lastNotify: 0,
 }
@@ -87,6 +92,7 @@ export function classifyBash(command) {
 export function checkGit(directory) {
   if (state.gitChecked) return
   state.gitChecked = true
+  // 1) An ANCESTOR repository: we are inside a working tree (the common case).
   let dir = directory
   for (let i = 0; i < 20; i++) {
     if (fs.existsSync(path.join(dir, ".git"))) {
@@ -97,7 +103,45 @@ export function checkGit(directory) {
     if (parent === dir) break
     dir = parent
   }
+  // 2) No ancestor repo. Before declaring the project version-control-free,
+  //    probe NESTED repositories. A workspace holding several sibling repos
+  //    (e.g. ~/Documents/<client>/<repo>/) has no .git at the root, and the old
+  //    ancestor-only walk reported "no git repository" there -- which told the
+  //    agent to `git init` the PARENT of many real repositories. Verified
+  //    2026-09-23 on ~/Documents/project-b (360bot-config/.git sits one level down).
+  const nested = findNestedRepos(directory, 2)
+  if (nested.length > 0) {
+    state.gitMissing = false
+    state.nestedRepos = nested
+    return
+  }
   state.gitMissing = true
+}
+
+// Shallow breadth-first search for repositories NESTED below root. Depth-limited
+// and capped so a huge workspace cannot stall a tool call.
+export function findNestedRepos(root, maxDepth) {
+  const found = []
+  const walk = (dir, depth) => {
+    if (depth > maxDepth || found.length >= 20) return
+    let entries
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".")) continue
+      const child = path.join(dir, e.name)
+      if (fs.existsSync(path.join(child, ".git"))) {
+        found.push(child)
+        continue
+      }
+      walk(child, depth + 1)
+    }
+  }
+  walk(root, 1)
+  return [...new Set(found)]
 }
 
 export function obligations() {
@@ -116,7 +160,11 @@ export function obligations() {
     )
   if (state.gitMissing)
     out.push(
-      `VERSION CONTROL: this project has no git repository. Run git init, add a sensible .gitignore, make an initial commit, and commit after each verified change.`,
+      `VERSION CONTROL: no git repository found (neither this project nor any ancestor or nested directory contains .git). Run git init, add a sensible .gitignore, make an initial commit, and commit after each verified change.`
+    )
+  else if (state.nestedRepos.length > 0)
+    out.push(
+      `VERSION CONTROL: the project root is not itself a repository, but ${state.nestedRepos.length} NESTED repo(s) exist (${state.nestedRepos.slice(0, 3).join(", ")}). Work inside the relevant nested repo and commit there. Do NOT run git init at the project root -- that would initialize the parent of multiple real repositories.`
     )
   return out
 }

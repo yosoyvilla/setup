@@ -66,3 +66,53 @@ instead of hanging silently. Load the `herdr` skill for the full contract. For r
 `dagr check --strict --json`); the herdr-dagr pane renders it live. Verified 2026-09-21:
 pi started as a Herdr agent via the pi integration and reported `done`; a headless
 `codex exec` in a raw pane was waited on by regex; the dagr pane rendered a run file.
+
+## Sampled Data and Alerts (any monitoring or analytics pipeline)
+
+Added 2026-09-23 after a live false-positive attack alert. Harness-neutral: applies to
+Cloudflare, New Relic NRQL, Prometheus, or any sampled/derived metric.
+
+- **Assert internal consistency before a derived number drives an alert.** A sub-group can
+  never exceed its own total, a subset ratio can never exceed 1, a count can never exceed
+  its superset. A violation means the pipeline is wrong: suppress it and log why, never
+  report it. The triggering case: an alert said one IP was blocked 2,112,449 times in a
+  window where the whole zone was blocked 382,629 times, and blocked more often than it
+  made requests. Both are impossible; either check catches both.
+- **Never compare normalised values whose sampling resolution differs.** The same window
+  returned `avg.sampleInterval` 6.42 at `limit:1` and 43.70 for a filtered query, so
+  `count x sampleInterval` from each is not commensurable.
+- **Prefer the exact, non-sampled source for decisions**; sampled data is for attribution
+  and enrichment only. Where the vendor offers an unsampled dataset beside sampled ones,
+  that is the source of truth.
+- **Confirm the unit before putting two metrics in one inequality.** Security EVENTS are
+  not requests; one request can raise several, so "blocks > requests" proves nothing.
+- **Alert on harm or novelty, never on activity the control plane already handles.** If
+  the platform is already mitigating at least as much as the source sends, that is
+  success, not an incident. An alert must be actionable (user feedback, 2026-09-23).
+- **Reproduce extreme numbers from the primary source before acting or reporting.**
+  "Is it real?" is answered by the exact dataset, not by re-reading the alert.
+- **Split fan-out queries by capability or permission.** One denied field fails the whole
+  multi-field query and every subject silently looks empty: mixing a paid-only dataset
+  into one GraphQL query marked 16 of 20 Cloudflare zones as "no analytics" when their
+  request data was readable the whole time. Distinguish "no data" from "no access".
+- **Assert every installed artifact has a repo counterpart.** A committed wrapper whose
+  helper exists only on the box is a half-versioned system.
+- **Fold every runtime config change into provisioning in the same change**, and read the
+  platform schema instead of assuming a key exists (one schema command disproved three
+  plausible key names). Hand-set config silently reverts on rebuild.
+
+## Editing Discipline (agent file edits)
+
+- A multi-line replace needs an explicit END anchor. A single-anchor replace touches
+  exactly one line and leaves the rest of the construct behind; it duplicated an `elif`
+  branch and a stray `}` that still looked plausible on inspection.
+- Line anchors are positional, not content-addressed: re-read a file between edits to it,
+  and batch related edits into one call.
+- Nested heredocs need distinct delimiters; an inner heredoc reusing the outer one
+  terminates it early and the shell reports an unmatched quote.
+- A heredoc supplying a program on stdin cannot also receive piped data; pass data via
+  argv or the environment (a piped `python3 - <<'PY'` saw EOF and reported "no valid JSON").
+- After adding a constant or symbol in a batched edit, grep for it to prove it landed;
+  a dropped edit surfaced only as a `NameError` when a timer fired.
+- Build the offline self-test early and run it after every edit; it caught three defects
+  that reading did not.

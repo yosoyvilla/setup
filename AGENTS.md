@@ -74,6 +74,15 @@ these where they conflict.
   sampling and report `count x avg.sampleInterval` — or label the figure as relative.
   Never publish a dimensional breakdown from an unnormalized sample: on 2026-09-22 the
   same window returned 455 vs 19,004 for two queries that differed only in `limit`.
+- Free is not the same as licensed. For any external data source or API, verify its
+  licence permits COMMERCIAL production use before adopting it. Verified 2026-09-23:
+  AbuseIPDB's free tier (Terms §7), GreyNoise's volume limits, and PeeringDB's AUP
+  each disqualified a source the design had already been built around.
+- Reviewers may not assert schema or API facts without a citation. On 2026-09-23
+  `@plan-critic` advised validating `result.scope.type == "zone"`; that field is only
+  `user|organization`, so the advice would have shipped a broken guard. Treat
+  reviewer-supplied API claims as hypotheses to verify against the docs, and cite a
+  primary source when you supply one.
 
 ## Memory (Engram)
 
@@ -140,6 +149,10 @@ evidence bar as everything else.
   separate descriptor (`while read -r -u 3 ...; done 3< file`). Otherwise the
   CLI drains the loop's input and only the first item is processed. (0 of 11
   benchmarked models got this right unprompted.)
+- A `readonly` shell variable used as a command-prefix assignment (`VAR=x cmd`) fails
+  with the error on stderr while STILL RUNNING the command — so a "successful" run
+  can hide a dead code path. On 2026-09-23 this silently disabled a dedupe step while
+  the alert path kept reporting success; only running the flow twice exposed it.
 
 ## Git and docs
 - Single-line commit messages. No co-author trailer. No emojis.
@@ -174,3 +187,119 @@ Adapted from Bun's Zig-to-Rust rewrite methodology (bun.com/blog/bun-in-rust).
   similar items (mass edits, multi-file migrations, `ultrawork` fan-outs), run
   2-3 representative items first, review the results, then scale. Never fan
   out an unproven workflow.
+- One installable artifact per delegation. Long multi-part delegated builds die
+  partway and leave unverifiable partial work — five such delegations aborted after
+  partial application on 2026-09-23. Slice the work so each delegation produces ONE
+  artifact that can be independently installed, verified and committed; never bundle
+  "build it + wire it + document it" into a single call.
+- Query actual account entitlements before designing around a platform feature. A
+  whole design pivoted on one unmade API call: 20 Cloudflare zones turned out to be
+  16 Free / 2 Pro / 2 Business / 0 Enterprise, which invalidated the chosen field, the
+  planned action and the assumed limits. Check the plan, quota and tier requirement
+  first, not after the design is written.
+
+### Shipping, deploys, and data changes (any project)
+
+- Gate once, then act. When a request needs a decision, ask it once, framed so
+  the safe default is the recommended option — never spread a menu of choices
+  across turns. Repeated gating reads as stalling; if a sensible default exists,
+  take it, state the assumption in one line, and proceed.
+- Verify the artifact, not the narration. An agent's — or your own — claim that
+  something works is a hypothesis until a build, test, or run confirms it. Read
+  the command output; absence of a failure you never looked for proves nothing.
+- Verify a write at the storage layer AND through the app's own read path. A
+  value can persist without error yet be stored in an unusable shape (e.g. a
+  JSON document double-encoded as a string). Check the representation, then read
+  it back the way the application does.
+- Make bulk data writes batched and idempotent. Row-at-a-time writes over a
+  remote or pooled database can time out and leave a partial write: batch them,
+  and make a re-run safe by only filling what is still empty.
+- Order schema and code correctly. Apply an additive migration BEFORE rolling
+  the code that reads it, then confirm the column/table exists. Reversed order
+  breaks the running app.
+- "Synced"/"healthy" status is not proof of deployment. Confirm the running
+  artifact — image/tag, deployed revision, live endpoint. CI and GitOps tools
+  report stale or drifted status routinely; judge by what is serving.
+- Load the environment explicitly in scripts. Ad-hoc runners do not read `.env`
+  automatically and silently hit a local/dev datastore, yielding a confident
+  wrong answer. Pass the env file and state which target you used.
+- Scope approval precisely. A verbal "approved" covers the idea, not the source,
+  method, or legal basis. When a step is irreversible or externally exposed
+  (third-party data, scraping, spend), ship the safe superset and state exactly
+  what was withheld and why, rather than folding an ambiguous approval into a
+  risky action.
+- Bypass a protection gate (protected branch, required review, admin override)
+  only when explicitly instructed — and say so loudly in the result.
+- Keep a non-browser verification path for UI. Browser automation fails; a live
+  HTTP status plus exercising the app's own code against real data is a valid
+  fallback. Report that the visual check did not run rather than implying it did.
+
+## Sampled data, alerts, and derived metrics
+
+- A number derived from sampled or extrapolated analytics must pass an internal
+  consistency check BEFORE it drives an alert or a decision: a sub-group can
+  never exceed its own total, a subset ratio can never exceed 1, a count can
+  never exceed its superset. If one does, the pipeline is wrong — suppress it
+  and log why, never report it. On 2026-09-23 a Cloudflare alert claimed one IP
+  was blocked 2,112,449 times in a window where the ENTIRE zone was blocked
+  382,629 times, and that the IP was blocked more often than it made requests.
+  Both are arithmetically impossible and either check would have caught it.
+- Never compare two normalised values whose sampling resolution differs. The
+  same window returned `avg.sampleInterval` 6.42 at `limit:1` and 43.70 for a
+  filtered/dimensional query, so `count x sampleInterval` from each is not
+  commensurable. Compare like-for-like, or move to the exact source.
+  "Benchmarked" is not required if the vendor does not advertise a limit; it is
+  a two-second measurement and it changes the answer.
+- Prefer the exact, non-sampled source for any decision; use sampled data only
+  for attribution and enrichment. Where a vendor offers an unsampled dataset
+  next to sampled ones (Cloudflare `httpRequests1hGroups` beside the adaptive
+  groups), that is the source of truth and the sampled figures are decoration.
+- Confirm the UNIT before putting two metrics in one inequality. Different
+  datasets count different things: `firewallEventsAdaptiveGroups` counts
+  security EVENTS, not requests, and one request can raise several, so
+  "blocks > requests" proves nothing until the units are known equal.
+- Alert on harm or novelty, never on activity the control plane is already
+  handling. If the platform is already blocking at least as much as the source
+  sends, that is success, not an incident — a notification must be actionable.
+  (User feedback, 2026-09-23: "you don't need to alert me if something was
+  already mitigated by Cloudflare".)
+- When an alert looks extreme, reproduce the numbers from the primary source
+  before acting on it or reporting it. "Is it real?" is answered by the exact
+  dataset, not by re-reading the alert.
+- Split a fan-out query by capability or permission. One denied field makes the
+  whole multi-field query fail, so every subject silently looks empty: mixing a
+  paid-only dataset into a single GraphQL query marked 16 of 20 Cloudflare
+  zones as "no analytics" when their request data had been readable all along.
+- Distinguish "no data" from "no access", and never let a capability error
+  masquerade as "nothing found". Surface every skip with its reason.
+- Enumerate the installed artifacts and assert each has a repo counterpart. A
+  committed wrapper whose helper lives only on the box is a half-versioned
+  system: `/usr/local/lib/360bot-attackcheck.py` was unversioned while its shell
+  wrapper was committed, so the running logic was unversioned.
+- Fold a runtime config change back into provisioning in the SAME change, and
+  read the platform's schema instead of assuming a key exists. A `groupPolicy`
+  set by hand on a box silently reverts on rebuild, and `openclaw config schema`
+  disproved three plausible key names in one command.
+
+## Editing discipline (agent file edits)
+
+- Give a multi-line replace an explicit end anchor. A single-anchor replace
+  touches exactly ONE line and silently leaves the rest of the construct
+  behind — on 2026-09-23 it duplicated an `elif` branch and left a stray `}`,
+  and both still looked plausible on inspection.
+- Line anchors are positional, not content-addressed. After any edit to a file,
+  re-read before the next edit to that file, and batch related edits into one
+  call. A stale anchor set caused an edit to land in the wrong place (above).
+- Nested heredocs need distinct delimiters: an inner heredoc reusing the outer
+  delimiter terminates it early and the shell reports an unmatched quote.
+- A heredoc that supplies a program on stdin cannot also receive data on stdin.
+  Pass the data via argv or the environment: piping JSON into `python3 - <<'PY'`
+  left `sys.stdin.read()` at EOF and reported "no valid JSON".
+- After adding a constant or a symbol in a batched edit, grep for it to prove it
+  landed. A constants edit was silently dropped and only surfaced as a
+  `NameError` when the timer next fired.
+- Build the offline self-test early and run it after every edit. It caught
+  three defects that reading did not: a missing GraphQL closing brace, the
+  duplicated branch above, and the stdin-EOF parse above.
+- `rm -rf` with an absolute path is blocked by the harness guard; use `rm -r`
+  or a path relative to the working directory.

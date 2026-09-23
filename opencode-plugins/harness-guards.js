@@ -6,7 +6,7 @@
  */
 import {
   DISABLED, SECRET_RE, DOC_FILE_RE, BROWSER_TOOL_RE, BASH_PROTECTED_RE,
-  LOG_DIR, AUDIT_LOG, state, sessionParent,
+  LOG_DIR, AUDIT_LOG, ABORT_LOG, state, sessionParent,
   classifyEdit, classifyBash, checkGit, obligations, obligationBlock,
   CLAUDE_SEATS, ANTHROPIC_MAX_OUTPUT, CLAUDE_EFFORT, NAN_EFFORTS,
 } from "../scripts/harness-guards-lib.mjs"
@@ -134,6 +134,29 @@ export const HarnessGuards = async ({ client, directory, $ }) => {
     },
 
     event: async ({ event }) => {
+      // Abort/error forensics: log any error/abort-shaped plugin event to a dedicated
+      // file. Background-task aborts report only "Session error" with nothing persisted,
+      // which left a recurring failure (4 aborts on 2026-09-23, every one after partial
+      // application) undiagnosable. Best-effort by design: if no such event ever fires
+      // the log simply stays empty, and a failure here must never break the run.
+      const eType = String(event?.type ?? "")
+      if (/error|abort|fail|interrupt/i.test(eType)) {
+        try {
+          fs.mkdirSync(LOG_DIR, { recursive: true })
+          let detail = ""
+          try {
+            detail = JSON.stringify(event?.properties ?? {}).slice(0, 4000)
+          } catch {
+            detail = "<unserializable properties>"
+          }
+          fs.appendFileSync(
+            ABORT_LOG,
+            `${new Date().toISOString()} type=${eType} session=${event?.properties?.sessionID ?? "-"} ${detail}\n`,
+          )
+        } catch {
+          /* forensics must never break a run */
+        }
+      }
       if (event?.type !== "session.idle") return
       const block = obligationBlock()
       if (!block) return
