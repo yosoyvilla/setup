@@ -96,3 +96,19 @@ The spec feeds the plan. Tests prove the acceptance criteria. `verification-befo
 - **No non-goals**: leads to scope creep during implementation ("while I'm in here…").
 - **Missing rollback plan for infra**: you'll be improvising under pressure when something goes wrong.
 - **Mixing projects in one spec**: each spec covers one project. project-a infra and project-c app changes get separate specs even if related.
+
+## Restate the plan as you go (added 2026-08-21, evidence-based)
+
+Every ~5 steps, or after any tool result that changes your understanding, restate in one
+short block: the remaining acceptance criteria, and which one you are on.
+
+This is the single intervention in the plan-compliance study (arXiv:2604.12147) that
+improved **all four** models tested, on both compliance and task success. It is cheap and
+nothing else in this harness does it. Two corollaries from the same paper:
+
+- **Never drop the reproduction step** when debugging. Removing it degraded every model.
+  Reproduce, then fix.
+- A **subpar plan is worse than no plan**. If the spec is being written only because a rule
+  demanded it, that is the signal to skip the ceremony, not to write a thin spec. Gate on
+  risk (production, auth/IAM, data, multi-account, real architectural uncertainty), never
+  on file count.

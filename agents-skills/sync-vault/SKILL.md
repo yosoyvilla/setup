@@ -18,9 +18,9 @@ Sync the Obsidian vault at ~/Documents/obsidian-vault/ with the current Codex co
    - ~/.Codex/rules/*.md (shared rules)
 
 2. Read the current vault documentation:
-   - ~/Documents/obsidian-vault/Codex/setup.md
-   - ~/Documents/obsidian-vault/Codex/multi-project-workflow.md
-   - ~/Documents/obsidian-vault/Codex/tips-and-tricks.md
+   - ~/Documents/obsidian-vault/claude-code/setup.md
+   - ~/Documents/obsidian-vault/claude-code/multi-project-workflow.md
+   - ~/Documents/obsidian-vault/claude-code/tips-and-tricks.md
 
 3. Compare and identify differences between the actual config and vault docs.
 
