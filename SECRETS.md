@@ -29,8 +29,8 @@ Then reload: `source ~/.zshrc`
 - **Where it lives:** ONLY in `~/.local/share/opencode/auth.json` (`{"anthropic": {"type": "api", "key": "..."}}`) and `~/.pi/agent/auth.json` (`{"anthropic": {"type": "api_key", "key": "..."}}`), both mode 600. Never in a config file, env var, this repo, or a chat.
 - **Get it:** https://console.anthropic.com → API keys
 
-### Codex / Cursor logins
-- `codex login` (ChatGPT/OpenAI account) and `cursor-agent login` store their own credentials; nothing to export.
+### Codex login
+- `codex login` (ChatGPT/OpenAI account) stores its own credentials; nothing to export.
 
 ### DIGITALOCEAN_TOKEN
 - **Used by:** `doctl` CLI and Terraform DigitalOcean provider (project-d project)

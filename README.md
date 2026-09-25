@@ -79,7 +79,7 @@ This setup runs several independent AI coding tools. Each has its own config dir
 | Claude Code (`claude`) | `~/.claude/` | `~/.claude/agents/*.md` | `claude-fable-5-1[1m]` | Anthropic account |
 | opencode | `~/.config/opencode/` | oh-my-openagent + 21 custom agents | `nan/deepseek-v4-flash-low`; Claude on two review seats | `NAN_API_KEY` + Anthropic key in `auth.json` |
 | pi + gentle-pi | `~/.pi/agent/`, `~/.pi/gentle-ai/` | gentle-pi packaged agents | `nan/deepseek-v4-flash` at thinking low; Claude on the review lenses | `NAN_API_KEY` + Anthropic key in `auth.json` |
-| Codex CLI / Cursor CLI | `~/.codex/`, `~/.cursor/` | none (blind reviewers) | `gpt-5.6-sol` high / `auto` | `codex login` / `cursor-agent login` |
+| Codex CLI | `~/.codex/` | none (blind reviewer) | `gpt-5.6-sol` high | `codex login` |
 | Herdr | `~/.config/herdr/` | detects the agents above in its panes | — | — |
 
 ### Why several tools?
@@ -89,7 +89,7 @@ This setup runs several independent AI coding tools. Each has its own config dir
 | Structured DevOps workflows | Claude Code | Domain agents (infra, k8s, security…), skills, hooks, memory |
 | Orchestrated NaN work, councils, verify pipeline | opencode | oh-my-openagent + custom `/council`, `/verify`, `/best-of` commands; Claude only on two review seats |
 | Cheaper NaN sessions, gentle-pi ODD/SDD workflow | pi | Native per-model effort; ~6k-token system prompt vs opencode's ~90k on Claude calls |
-| Blind adversarial reviews from other model families | Codex CLI, Cursor CLI | Reviewers that never see the implementer's reasoning |
+| Blind adversarial reviews from other model families | Codex CLI | Reviewer that never sees the implementer's reasoning. Cursor CLI held a second seat until 2026-09-25; that seat is vacant. |
 | Running all of the above side by side | Herdr | Persistent panes, agent state in a sidebar, CLI to start/prompt/wait on agents |
 
 Zed was part of this setup until 2026-09-21 and was removed (uninstalled on the live machine, sections retired here).
@@ -1928,7 +1928,7 @@ herdr agent list                          # agents running in panes and their st
 | Adversarial review / plan review | opencode | anthropic/claude-sonnet-5 (`@critic`) / claude-opus-5 (`@plan-critic`), effort low, 8k cap |
 | Fact checking | opencode | nan/glm5.3-flash-high (`@fact-checker`) |
 | Cheaper NaN sessions | pi | nan/deepseek-v4-flash at thinking low; review lenses on Claude Sonnet 5 |
-| Blind second-opinion reviews | Codex CLI / Cursor CLI | gpt-5.6-sol high / auto |
+| Blind second-opinion reviews | Codex CLI | gpt-5.6-sol high |
 
 ---
 
@@ -2118,17 +2118,17 @@ Rules that keep the repo consistent:
 
 [Herdr](https://herdr.dev) is a terminal workspace manager for coding agents: a background server owns the panes, clients attach like tmux, and agents running inside panes show `working` / `blocked` / `done` in a sidebar. Installed 0.9.1 on the live machine (`curl -fsSL https://herdr.dev/install.sh | sh`; update with `herdr update --handoff`, which migrates live panes).
 
-- **Integrations** ([`herdr/integrations.txt`](herdr/integrations.txt), one name per line): `pi` and `opencode` report lifecycle state and session ids through a bundled extension/plugin; `claude`, `codex` and `cursor` report session identity through one `SessionStart` hook each (state still comes from screen detection). Each install adds exactly one hook entry to the respective config (verified by semantic diff). Those files are not vendored; `install.sh` re-runs `herdr integration install <name>` per line.
+- **Integrations** ([`herdr/integrations.txt`](herdr/integrations.txt), one name per line): `pi` and `opencode` report lifecycle state and session ids through a bundled extension/plugin; `claude` and `codex` report session identity through one `SessionStart` hook each (state still comes from screen detection). Each install adds exactly one hook entry to the respective config (verified by semantic diff). Those files are not vendored; `install.sh` re-runs `herdr integration install <name>` per line.
 - **Plugins** ([`herdr/plugins.txt`](herdr/plugins.txt), tab-separated `owner/repo[/subdir]`, pinned commit, plugin id, enabled state; `install.sh` installs each with `herdr plugin install --ref <commit> <source> --yes` and re-applies the disabled state): herdr-dagr (live DAG of an agent run; the `dagr` binary is symlinked to `~/.local/bin`, the `dagr-producer` skill writes `.dagr/run.json`), hunk (review agent diffs), herdr-nvim, and two tab-naming plugins. `herdr plugin action invoke` acts on the **focused** workspace; focus it first.
 - **Skill**: `skills/herdr/` (from `herdrdev/herdr`) teaches Claude Code and pi to drive panes from inside a Herdr pane (`HERDR_ENV=1`). The rule in `rules/agent-workflows.md` says when to use `herdr agent start/prompt/wait` and `pane run/wait-output` instead of detached shells.
 - Not adopted (2026-09-21): usage/quota plugins. For NaN allowance use `/gentle:usage` in pi or `nan-cli`.
 
 ## 17. Codex CLI
 
-Codex CLI (`npm install -g @openai/codex`, `codex login`) is used as a blind adversarial reviewer alongside Cursor CLI (`codex exec --skip-git-repo-check --sandbox read-only -m gpt-5.6-sol -o <file> "<prompt>" </dev/null`). Vendored under [`codex/`](codex/):
+Codex CLI (`npm install -g @openai/codex`, `codex login`) is used as a blind adversarial reviewer (`codex exec --skip-git-repo-check --sandbox read-only -m gpt-5.6-sol -o <file> "<prompt>" </dev/null`). Vendored under [`codex/`](codex/):
 
 - `config.toml` is a **curated** subset generated by the sync script: model `gpt-5.6-sol`, reasoning effort `high`, the plugin enable/disable list (`explanatory-output-style` and `github` disabled as duplicates of the Claude Code plugins), `[features] hooks = true`, memories, and an allowlisted shell environment policy. Marketplace caches, MCP servers bound to the ChatGPT desktop app, per-machine project trust entries and desktop UI state are not vendored; `install.sh` places the curated file only when no `config.toml` exists yet (a known non-converging step, stated in its log line).
 - `AGENTS.md`: the routing section for Claude-only subagents was replaced on 2026-09-21 by a "working alone" section, since Codex has none of those agents.
 - `hooks.json`: Codex hooks, re-placed on every install run (the Herdr `SessionStart` entry is re-created by the integration installer).
 
-Cursor CLI is configured separately (`cursor-agent --model auto`); its `mcp.json` holds plaintext tokens and is deliberately not vendored.
+Cursor was retired on 2026-09-25 (app, `~/.cursor`, `cursor-agent` CLI and its herdr integration all removed). It previously held a second blind-reviewer seat; that seat is currently vacant.
