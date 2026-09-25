@@ -61,7 +61,9 @@ if command -v checkov >/dev/null 2>&1; then
   [ -n "$c" ] && add "checkov (raw)" "$c"
 fi
 if command -v trivy >/dev/null 2>&1; then
-  r=$(trivy config --quiet --no-progress --severity HIGH,CRITICAL "$FILE" 2>/dev/null | head -$MAXLINES)
+  # --no-progress is NOT a valid `trivy config` flag (0.74.0 prints usage and exits 0),
+  # and a FILE target yields an empty report -- trivy config takes a DIR. Both verified.
+  r=$(trivy config --quiet --severity HIGH,CRITICAL "$DIR" 2>/dev/null | head -$MAXLINES)
   [ -n "$r" ] && add "trivy config (raw)" "$r"
 fi
 

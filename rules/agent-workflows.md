@@ -31,6 +31,18 @@ spec-driven-development or plan-critic.
   contradicting you is a prompt to re-verify, not to capitulate: on 2026-08-21 one
   reviewer's confident claim about permission precedence was wrong, and one of its
   refutations of a "no secrets" conclusion was right.
+- Expect the review to find something. Across four consecutive slices of one project
+  (2026-09-22), every adversarial review found a real, security-relevant defect that
+  the full test suite, clippy and CI had all passed: a timeout that was not an absolute
+  bound with dead expiry code, a refusal oracle (uniform verdict, non-uniform message
+  that reached the wire), a fail-open capability allowlist sitting parallel to the
+  derived role table, and a signature binding that was cosmetic. Its yield is high
+  enough that trimming the review is the wrong economy; trim the delegation around it.
+- A document asserting a property is not evidence the property holds. Decision records,
+  ADRs and your own summaries are hypotheses until the code is checked against them:
+  two review findings in one session were claims in an *accepted* ADR that the
+  implementation never made, and a third was a documented limit with no code behind it.
+  Read the code against the claim, not the claim alone.
 
 ## Fix the Workflow, Not the Output
 When an agent or skill produces the same bad pattern twice, edit the agent or
@@ -56,7 +68,7 @@ review the results, then scale. Never fan out an unproven workflow.
 ## Herdr (terminal workspace manager, installed; 0.9.1)
 When `HERDR_ENV=1` is set this session runs inside a Herdr pane. Prefer Herdr's
 primitives over detached shells for reviewer and helper processes: `herdr pane split`,
-`herdr agent start <name> --kind codex|pi|opencode|claude|cursor --pane <id>`,
+`herdr agent start <name> --kind codex|pi|opencode|claude --pane <id>`,
 `herdr agent prompt <name> "..." --wait`, `herdr agent wait <name> --until blocked`,
 `herdr pane run <id> "<cmd>"` + `herdr pane wait-output <id> --regex "<done marker>"`,
 `herdr agent read <name>`. Processes survive detach and their state (working, blocked,
@@ -115,4 +127,43 @@ Cloudflare, New Relic NRQL, Prometheus, or any sampled/derived metric.
 - After adding a constant or symbol in a batched edit, grep for it to prove it landed;
   a dropped edit surfaced only as a `NameError` when a timer fired.
 - Build the offline self-test early and run it after every edit; it caught three defects
+  - Build the offline self-test early and run it after every edit; it caught three defects
   that reading did not.
+- Before overwriting a table row or column, check what it *was*. A status narrative
+  replaced a normative column twice in one session (an exit criterion, then a whole
+  row) because the surrounding table looked homogeneous. Prefer a surgical substring
+  edit plus a presence check (`grep -c '^| Phase '`), and recover with
+  `git show <first-commit>:<file>` rather than reconstructing content from memory.
+- After a deliberate-break experiment, verify the restore landed. A command timeout
+  killed a script before its restore step, leaving a security gate disabled until the
+  file was re-checked by hand. Diff against a backup; do not assume the undo ran.
+
+## Gated Commits, Flakes, and Aborted Work
+
+- Never chain a commit onto a gate whose exit code you have not checked. Running
+  `verify; git add -A && git commit` committed and pushed a red state — the gate had
+  exited 101 and the `;` let the commit proceed regardless. Run the gate, read its exit
+  code, then act (`verify && git commit` at the very least).
+- Capture the NAME of a failing test, not just the count. One run reported "277 passed
+  / 1 failed" and the name was never recorded; thirteen later runs were clean and the
+  flake is now permanently unexplained. A count is not a diagnosis.
+- After an interrupted or aborted subagent, run the full gate, not only the test suite.
+  Aborted work left half-written functions that `cargo test` tolerated while
+  `clippy --all-targets -- -D warnings` rejected them.
+
+
+## Reported errors and rejections (triage)
+
+- For a reported failure, the first evidence is the running system (logs, DB, HTTP status), gathered
+  in parallel with reading the code — not the code alone. A code read cannot tell an outage from a
+  validation rule; reading only the code invites a wrong conclusion (and an over-long answer).
+- A vendor-composed error label (`ERROR_<VENDOR> <code>`) is the caller's wording, not the system's;
+  the numeric code is the HTTP status the system returned. Lead with that separation when the literal
+  is absent from every repo — absence of the string is itself evidence it is not the system's message.
+- Classify by status before theorising. `4xx` is deterministic (reproducible; nothing was created),
+  `5xx` is the transient class (timeouts, DNS, pool/node exhaustion). "It failed twice" plus a `4xx`
+  means a rule, not intermittency; rule intermittency in or out with a `5xx` query, never by feel.
+- Do not diagnose stored data from a customer-facing screen; validate against the system's own rows.
+  Identifiers shown by a client may be a different entity than the one the system holds.
+- When the reason lives in a response body that is not logged, ask for the raw body rather than
+  guessing, and treat "log the reason on 4xx" as the product fix that closes the class.

@@ -83,6 +83,11 @@ these where they conflict.
   `user|organization`, so the advice would have shipped a broken guard. Treat
   reviewer-supplied API claims as hypotheses to verify against the docs, and cite a
   primary source when you supply one.
+- A document asserting a property is not evidence the property holds. Decision
+  records, ADRs and your own summaries are hypotheses until the code is checked
+  against them: in one session two review findings were accepted-ADR claims the
+  implementation never made, and a third was a documented limit with no code behind
+  it. Read the code against the claim, not the claim alone.
 
 ## Memory (Engram)
 
@@ -137,6 +142,16 @@ evidence bar as everything else.
 - A task or todo may be marked completed only with verification evidence: the
   command that proved it and its observed result. "It should work" does not
   close a task.
+- Never chain a commit onto a gate whose exit code you have not checked. Running
+  `verify; git add -A && git commit` committed and pushed a red state — the gate had
+  exited 101 and the `;` let the commit proceed regardless. Run the gate, read its
+  exit code, then act (`verify && git commit` at the very least).
+- Capture the NAME of a failing test, not just the count. One run reported "277
+  passed / 1 failed" and the name was never recorded; thirteen later runs were clean
+  and the flake is now permanently unexplained. A count is not a diagnosis.
+- After an interrupted or aborted subagent, run the full gate, not only the test
+  suite. Aborted work left half-written functions that `cargo test` tolerated while
+  `clippy --all-targets -- -D warnings` rejected them.
 
 ## Code
 - SOLID/KISS/DRY applied pragmatically, not dogmatically. Extract on the third
@@ -180,6 +195,12 @@ Adapted from Bun's Zig-to-Rust rewrite methodology (bun.com/blog/bun-in-rust).
   the code. High-risk changes (prod infra, auth, data migrations): two
   independent reviews — `@critic` and `@thermo-nuclear-review` — neither seeing
   the other's output. (opencode: `@critic`, `/verify`.)
+- Expect the review to find something. Across four consecutive slices, every
+  adversarial review found a real, security-relevant defect that the full test
+  suite, clippy and CI had all passed — a non-absolute timeout with dead expiry
+  code, a refusal oracle, a fail-open capability list, a cosmetic signature binding.
+  Its yield is high enough that trimming the review is the wrong economy; trim the
+  delegation around it instead.
 - Fix the workflow, not the output. When an agent, skill, or command produces
   the same bad pattern twice, edit its definition instead of hand-fixing
   instances — one definition edit fixes the class of error.
@@ -303,3 +324,11 @@ Adapted from Bun's Zig-to-Rust rewrite methodology (bun.com/blog/bun-in-rust).
   duplicated branch above, and the stdin-EOF parse above.
 - `rm -rf` with an absolute path is blocked by the harness guard; use `rm -r`
   or a path relative to the working directory.
+- Before overwriting a table row or column, check what it *was*. A status narrative
+  replaced a normative column twice in one session (an exit criterion, then a whole
+  row) because the surrounding table looked homogeneous. Prefer a surgical substring
+  edit plus a presence check (`grep -c '^| Phase '`), and recover with
+  `git show <first-commit>:<file>` rather than reconstructing content from memory.
+- After a deliberate-break experiment, verify the restore landed. A command timeout
+  killed a script before its restore step, leaving a security gate disabled until
+  the file was re-checked by hand. Diff against a backup; do not assume the undo ran.

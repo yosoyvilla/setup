@@ -180,9 +180,13 @@ export const HarnessGuards = async ({ client, directory, $ }) => {
         .map((o) => o.split(":")[0])
         .join(", ")
       try {
-        await $`osascript -e ${"display notification \"Unverified: " + summary + "\" with title \"harness-guards\""}`
+        if (process.platform === "darwin") {
+          await $`osascript -e ${"display notification \"Unverified: " + summary + "\" with title \"harness-guards\""}`
+        } else {
+          await $`notify-send ${"harness-guards"} ${"Unverified: " + summary}`
+        }
       } catch {
-        /* non-macOS or osascript unavailable — notification is best-effort */
+        /* notifier unavailable — notification is best-effort */
       }
     },
   }

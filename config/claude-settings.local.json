@@ -145,7 +145,9 @@
       "WebFetch(domain:x.com)",
       "WebFetch(domain:bun.com)",
       "Bash(mdfind -name \"cover\")",
-      "Bash(mdls -name kMDItemFSSize ~/Downloads/David_Villa_CV.pdf)"
+      "Bash(mdls -name kMDItemFSSize ~/Downloads/David_Villa_CV.pdf)",
+      "Bash(command -v sshpass)",
+      "Bash(ssh *)"
     ],
     "deny": [
       "Bash(terraform destroy:*)",
