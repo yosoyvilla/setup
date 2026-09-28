@@ -3,7 +3,7 @@
 # sync-from-live.sh — sanitized live -> repo sync for this setup repo.
 #
 # Stages the live workstation harness config (Claude Code, opencode, pi +
-# gentle-pi, Codex CLI, Herdr manifests, ~/.agents/skills) into a temp dir,
+# ~/.harness (source of truth), Codex CLI, Herdr manifests, ~/.agents/skills) into a temp dir,
 # templatizes machine paths (__HOME__), applies the client-name sanitize map,
 # then verifies hard gates before mirroring the staging tree into this repo's
 # working tree:
@@ -11,7 +11,7 @@
 #   2. no secret-shaped string (token prefixes, private keys, JWTs, live key values)
 # Any gate failure aborts with the staging dir preserved for inspection and the
 # repo untouched. The script NEVER commits and NEVER writes to live config.
-# Files that tools install themselves (Herdr integration hooks/plugins, gentle-ai
+# Files that tools install themselves (Herdr integration hooks/plugins,
 # synced skills) are excluded: install.sh re-creates them with the tool's own
 # installer so the repo never carries a stale copy.
 #
@@ -41,14 +41,10 @@ DRY_RUN=0
 PROTECTED="agents/airbyte.md skills/scalr-deploy/SKILL.md"
 
 # Repo dirs fully mirrored from staging (rsync --delete).
-MANAGED_DIRS="agents skills hooks rules agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts pi codex herdr"
+MANAGED_DIRS="agents skills hooks rules agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts harness codex herdr"
 # Managed dirs that may legitimately be absent on a machine without that tool (skipped, never deleted).
-OPTIONAL_DIRS="pi codex herdr"
+OPTIONAL_DIRS="codex herdr"
 is_optional(){ case " $OPTIONAL_DIRS " in *" $1 "*) return 0;; *) return 1;; esac; }
-# Skills that `gentle-ai sync --agents pi` generates into the SHARED ~/.agents/skills. They belong to pi only:
-# excluded from agents-skills staging here and quarantined into ~/.pi/agent/skills by install.sh (which reads
-# pi/gentle-skills.txt, written below, so the list lives in one place).
-GENTLE_SKILLS="_shared chained-pr cognitive-doc-design go-testing judgment-day sdd-apply sdd-archive sdd-design sdd-explore sdd-init sdd-onboard sdd-propose sdd-research sdd-spec sdd-tasks sdd-verify skill-improver skill-registry work-unit-commits"
 # An optional tool's tree is staged all-or-nothing: `require_all <dir> <path>...` dies when the tool is present
 # but any expected file is missing, so a partial tree can never reach `rsync --delete` and remove committed files.
 require_all(){ local d="$1"; shift; local f; for f in "$@"; do [ -e "$STAGE/$d/$f" ] || die "$d/: expected $f was not staged (tool present but config incomplete) — refusing to mirror a partial tree"; done; }
@@ -114,28 +110,25 @@ stage_dir "$LIVE_HOME/.claude/agents"            agents
 stage_dir "$LIVE_HOME/.claude/skills"            skills --exclude 'synced/' --exclude 'terminal-browser'
 stage_dir "$LIVE_HOME/.claude/hooks"             hooks --exclude 'engram-sync.*' --exclude 'herdr-*'
 stage_dir "$LIVE_HOME/.claude/rules"             rules
-GENTLE_EXCLUDES=(); for g in $GENTLE_SKILLS; do GENTLE_EXCLUDES+=(--exclude "$g/"); done
-stage_dir "$LIVE_HOME/.agents/skills"            agents-skills -L "${GENTLE_EXCLUDES[@]}"   # shared skills dir; resolve symlinks; no gentle-generated skills
+stage_dir "$LIVE_HOME/.agents/skills"            agents-skills -L   # shared skills dir (opencode reads it); resolve symlinks
 stage_dir "$LIVE_HOME/.config/opencode/agents"   opencode-agents
 stage_dir "$LIVE_HOME/.config/opencode/commands" opencode-commands
 stage_dir "$LIVE_HOME/.config/opencode/plugins"  opencode-plugins --exclude 'herdr-*'
 stage_dir "$LIVE_HOME/.config/opencode/scripts"  opencode-scripts
 
-# pi coding agent + gentle-pi (auth.json NEVER staged; gentle-ai synced skills and
-# Herdr's extension are re-created by their installers, so they are excluded)
-if [ -d "$LIVE_HOME/.pi/agent" ]; then
-  stage_dir  "$LIVE_HOME/.pi/agent/extensions"      pi/extensions --exclude 'herdr-*'
-  stage_dir  "$LIVE_HOME/.pi/agent/scripts"         pi/scripts
-  stage_file "$LIVE_HOME/.pi/agent/models.json"     pi/models.json
-  stage_file "$LIVE_HOME/.pi/agent/settings.json"   pi/settings.json
-  stage_file "$LIVE_HOME/.pi/agent/AGENTS.md"       pi/AGENTS.md
-  stage_file "$LIVE_HOME/.pi/agent/mcp.json"        pi/mcp.json
-  stage_file "$LIVE_HOME/.pi/gentle-ai/models.json" pi/gentle-ai-models.json
-  mkdir -p "$STAGE/pi"; printf '%s\n' $GENTLE_SKILLS > "$STAGE/pi/gentle-skills.txt"
-  require_all pi extensions/harness-guards.ts scripts/check-pi-harness.mjs scripts/test-pi-guards.mjs models.json settings.json AGENTS.md mcp.json gentle-ai-models.json gentle-skills.txt
-  [ -f "$STAGE/pi/models.json" ] && grep -q 'auth\.json' "$STAGE/pi/models.json" && die "pi/models.json references auth.json — keys must never be inlined"
+# ~/.harness — the SINGLE SOURCE OF TRUTH for agents, skills, rules, hooks and the
+# instruction files. Every tool's own dir holds GENERATED copies, so those are staged above
+# only as a snapshot; this is the authoritative one. sync.py and the canonical agents matter most.
+if [ -d "$LIVE_HOME/.harness" ]; then
+  stage_dir  "$LIVE_HOME/.harness/agents"       harness/agents
+  stage_dir  "$LIVE_HOME/.harness/instructions" harness/instructions
+  stage_dir  "$LIVE_HOME/.harness/hooks"        harness/hooks
+  stage_dir  "$LIVE_HOME/.harness/rules"        harness/rules
+  stage_file "$LIVE_HOME/.harness/sync.py"      harness/sync.py
+  stage_file "$LIVE_HOME/.harness/README.md"    harness/README.md
+  require_all harness sync.py README.md instructions/CLAUDE.md instructions/AGENTS.md
 else
-  warn "pi not installed here (~/.pi/agent missing) — pi/ left as committed"
+  die "~/.harness missing — it is the source of truth; refusing to sync a partial config"
 fi
 
 # Codex CLI: AGENTS.md and hooks verbatim; config.toml as a CURATED portable subset
@@ -287,7 +280,7 @@ for f in "$STAGE"/config/claude-settings.json "$STAGE"/config/claude-settings.lo
          "$STAGE"/config/opencode.jsonc "$STAGE"/config/CLAUDE.md "$STAGE"/oh-my-openagent.json; do
   [ -f "$f" ] && templatize "$f"
 done
-for d in pi codex herdr; do
+for d in harness codex herdr; do
   [ -d "$STAGE/$d" ] || continue
   while IFS= read -r -d '' f; do templatize "$f"; done < <(find "$STAGE/$d" -type f -print0)
 done
@@ -405,6 +398,6 @@ ok "oh-my-openagent.json"
 section "Done — review and commit manually"
 git -C "$REPO_DIR" status --short || true
 warn "review 'git diff' carefully, then commit yourself (single-line message, no emojis, no session URLs)"
-if git -C "$REPO_DIR" status --porcelain 2>/dev/null | grep -qE 'config/opencode\.jsonc|oh-my-openagent\.json|^.M pi/|^.M codex/'; then
+if git -C "$REPO_DIR" status --porcelain 2>/dev/null | grep -qE 'config/opencode\.jsonc|oh-my-openagent\.json|^.M harness/|^.M codex/'; then
   warn "core configs changed — check that README section summaries (6.2, 6.3, 7, 17) still describe them"
 fi

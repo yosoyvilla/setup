@@ -2,4 +2,3 @@ claude
 codex
 hermes
 opencode
-pi

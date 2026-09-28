@@ -1,6 +1,6 @@
 # Developer Setup Guide
 
-Complete setup for a development workstation running **macOS, Debian/Ubuntu, or Fedora**: Claude Code, opencode CLI, the pi coding agent (gentle-pi), Codex CLI, Herdr, and all supporting tooling. Written to be followed top-to-bottom on a fresh machine.
+Complete setup for a development workstation running **macOS, Debian/Ubuntu, or Fedora**: Claude Code, opencode CLI, Codex CLI, Herdr, and all supporting tooling. Written to be followed top-to-bottom on a fresh machine.
 
 > **For AI agents reading this:** This document describes a real, active setup. Every config block is accurate and production-tested. Follow sections in order — prerequisites before tools, tools before config. All agent and skill system prompts are LLM-agnostic — they work with Claude, GPT, Qwen, DeepSeek, or any capable model.
 
@@ -8,7 +8,7 @@ Complete setup for a development workstation running **macOS, Debian/Ubuntu, or 
 
 ## Quick Start (automated)
 
-On **macOS** or **Debian/Ubuntu**, the bundled installer does the whole setup — tools, Claude Code, opencode, pi + gentle-pi, Codex CLI, Herdr, Engram, Playwright, and every vendored config/agent/skill/rule/hook:
+On **macOS** or **Debian/Ubuntu**, the bundled installer does the whole setup — tools, Claude Code, opencode, Codex CLI, Herdr, Engram, Playwright, ~/.harness, and every vendored config/agent/skill/rule/hook:
 
 ```bash
 git clone git@github.com:yosoyvilla/setup.git && cd setup
@@ -26,7 +26,7 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
 ./install-claude.sh
 ```
 
-`install-claude.sh` installs the Claude Code CLI and places everything under `~/.claude` (CLAUDE.md, settings, 18 agents, skills with support scripts, rules, the auto-sync hook) — and touches **nothing else**: no opencode, no pi, no Herdr, no Engram, no extra tooling. Same guarantees as `install.sh` (idempotent, unattended, backups). `install.sh` delegates its Claude Code section to this script, so the logic exists once.
+`install-claude.sh` installs the Claude Code CLI and places everything under `~/.claude` (CLAUDE.md, settings, 18 agents, skills with support scripts, rules, the auto-sync hook) — and touches **nothing else**: no opencode, no Herdr, no Engram, no extra tooling. Same guarantees as `install.sh` (idempotent, unattended, backups). `install.sh` delegates its Claude Code section to this script, so the logic exists once.
 
 ---
 
@@ -52,11 +52,10 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
    - [TUI and Legacy Config](#64-tui-and-legacy-config)
    - [Verify Installation](#65-verify-installation)
    - [Shared AGENTS.md, Custom Agents, Commands](#66-shared-agentsmd-custom-agents-and-commands)
-7. [pi coding agent + gentle-pi](#7-pi-coding-agent--gentle-pi)
+7. [~/.harness — single source of truth](#7-harness--single-source-of-truth)
    - [Installation](#71-installation)
    - [Config](#72-config)
    - [Guard extension and checker](#73-guard-extension-and-checker)
-   - [gentle-pi](#74-gentle-pi)
 8. [Engram (Persistent Memory)](#8-engram-persistent-memory)
 9. [Obsidian Vault](#9-obsidian-vault)
 10. [Environment Variables](#10-environment-variables)
@@ -72,13 +71,12 @@ git clone git@github.com:yosoyvilla/setup.git && cd setup
 
 ## 1. AI Assistants — Architecture Overview
 
-This setup runs several independent AI coding tools. Each has its own config directory, agent format and tool system; agents and skills from one do **not** carry over to another, except for the shared skills directory `~/.agents/skills` that opencode and pi both read.
+This setup runs several independent AI coding tools. Each has its own config directory, agent format and tool system; agents and skills from one do **not** carry over to another, except for the shared skills directory `~/.agents/skills` that opencode reads, and `~/.harness`, which generates config for all of them.
 
 | Tool | Config | Agents | Default model | Auth |
 |---|---|---|---|---|
 | Claude Code (`claude`) | `~/.claude/` | `~/.claude/agents/*.md` | `claude-fable-5-1[1m]` | Anthropic account |
 | opencode | `~/.config/opencode/` | oh-my-openagent + 21 custom agents | `nan/deepseek-v4-flash-low`; Claude on two review seats | `NAN_API_KEY` + Anthropic key in `auth.json` |
-| pi + gentle-pi | `~/.pi/agent/`, `~/.pi/gentle-ai/` | gentle-pi packaged agents | `nan/deepseek-v4-flash` at thinking low; Claude on the review lenses | `NAN_API_KEY` + Anthropic key in `auth.json` |
 | Codex CLI | `~/.codex/` | none (blind reviewer) | `gpt-5.6-sol` high | `codex login` |
 | Herdr | `~/.config/herdr/` | detects the agents above in its panes | — | — |
 
@@ -88,7 +86,6 @@ This setup runs several independent AI coding tools. Each has its own config dir
 |---|---|---|
 | Structured DevOps workflows | Claude Code | Domain agents (infra, k8s, security…), skills, hooks, memory |
 | Orchestrated NaN work, councils, verify pipeline | opencode | oh-my-openagent + custom `/council`, `/verify`, `/best-of` commands; Claude only on two review seats |
-| Cheaper NaN sessions, gentle-pi ODD/SDD workflow | pi | Native per-model effort; ~6k-token system prompt vs opencode's ~90k on Claude calls |
 | Blind adversarial reviews from other model families | Codex CLI | Reviewer that never sees the implementer's reasoning. Cursor CLI held a second seat until 2026-09-25; that seat is vacant. |
 | Running all of the above side by side | Herdr | Persistent panes, agent state in a sidebar, CLI to start/prompt/wait on agents |
 
@@ -96,20 +93,20 @@ Zed was part of this setup until 2026-09-21 and was removed (uninstalled on the 
 
 ### Agent systems compared
 
-| Concept | Claude Code | opencode (oh-my-openagent) | pi (gentle-pi) |
-|---|---|---|---|
-| Config location | `~/.claude/agents/*.md` | `~/.config/opencode/{oh-my-openagent.json,agents/*.md}` | `~/.pi/agent/*.json`, `~/.pi/gentle-ai/models.json` |
-| Domain agents | 18 custom agents (infra, k8s, gcp, doc-reviewer…) | 21 custom agents (11 domain, 6 advisory/lead, 4 review seats) | gentle-pi's packaged agents (explore/worker/verify, review lenses, SDD) |
-| Orchestrator | `lead` agent (Claude Opus) | Sisyphus on `nan/deepseek-v4-flash-low` | the session itself on `nan/deepseek-v4-flash` at thinking low |
-| Plan review | `plan-critic` agent | `@plan-critic` (Claude Opus 5, effort low, 8k cap) | gentle-pi native review (reliability/risk/resilience/readability lenses) |
-| Adversarial review | `code-quality` agent | `@critic` (Claude Sonnet 5, effort low, 8k cap) + `@thermo-nuclear-review` (NaN) | review lenses on Claude Sonnet 5, effort low, 8k cap |
-| Fact checking | — | `@fact-checker` on `nan/glm5.3-flash-high` | — |
-| Everything else | sonnet / haiku aliases | `nan/deepseek-v4-flash-low`, fallback `nan/glm5.3-flash-low` | `nan/deepseek-v4-flash` low |
-| Enforcement | hooks (`destructive-guard.sh` etc.) | permissions + `harness-guards.js` plugin + `check-harness.mjs` | `harness-guards.ts` extension + `check-pi-harness.mjs` (pi has no permission layer) |
+| Concept | Claude Code | opencode (oh-my-openagent) |
+|---|---|---|
+| Config location | `~/.claude/agents/*.md` | `~/.config/opencode/{oh-my-openagent.json,agents/*.md}` |
+| Domain agents | 18 custom agents (infra, k8s, gcp, doc-reviewer…) | 21 custom agents (11 domain, 6 advisory/lead, 4 review seats) |
+| Orchestrator | `lead` agent (Claude Opus) | Sisyphus on `nan/deepseek-v4-flash-low` |
+| Plan review | `plan-critic` agent | `@plan-critic` (Claude Opus 5, effort low, 8k cap) |
+| Adversarial review | `code-quality` agent | `@critic` (Claude Sonnet 5, effort low, 8k cap) + `@thermo-nuclear-review` (NaN) |
+| Fact checking | — | `@fact-checker` on `nan/glm5.3-flash-high` |
+| Everything else | sonnet / haiku aliases | `nan/deepseek-v4-flash-low`, fallback `nan/glm5.3-flash-low` |
+| Enforcement | hooks (`destructive-guard.sh`, `md-approval-guard.sh`, `force-push-guard.sh`, `no-emoji-in-docs.sh`, `verify-after-edit.sh`) | permissions + `harness-guards.js` plugin + `check-harness.mjs` |
 
 ### Key distinction for agents and skills in this repo
 
-The files in `agents/` and `skills/` are **Claude Code files only** — they use Claude Code's tool names and agent system, and opencode cannot load or run them. The repo also vendors opencode-specific assets (`opencode-agents/`, `opencode-commands/`), the shared skills directory (`agents-skills/`, i.e. `~/.agents/skills`), pi (`pi/`), Codex (`codex/`), Herdr manifests (`herdr/`), and a tool-agnostic `AGENTS.md`.
+The files in `agents/` and `skills/` are **Claude Code files only** — they use Claude Code's tool names and agent system, and opencode cannot load or run them. The repo also vendors opencode-specific assets (`opencode-agents/`, `opencode-commands/`), the shared skills directory (`agents-skills/`, i.e. `~/.agents/skills`), the source of truth (`harness/`), Codex (`codex/`), Herdr manifests (`herdr/`), and a tool-agnostic `AGENTS.md`.
 
 When you set up a new machine:
 - `agents/*.md` → copy to `~/.claude/agents/` (Claude Code)
@@ -119,10 +116,10 @@ When you set up a new machine:
 - `opencode-agents/*.md` → `~/.config/opencode/agents/`, `opencode-commands/*.md` → `~/.config/opencode/commands/` (opencode; see Section 6.6)
 - `opencode-scripts/*.mjs` → `~/.config/opencode/scripts/` (harness checker + harness-guards lib and tests; see Section 6.7)
 - `opencode-plugins/*.js` → `~/.config/opencode/plugins/` (harness-guards enforcement plugin)
-- `AGENTS.md` → `~/.config/opencode/AGENTS.md` (see Section 6.6); pi has its own `pi/AGENTS.md`
+- `AGENTS.md` → `~/.config/opencode/AGENTS.md` (see Section 6.6) and `~/AGENTS.md`, both generated from `harness/instructions/AGENTS.md`
 - `rules/*.md` → `~/.claude/rules/` (Claude Code shared rules: terraform, kubernetes, security-baseline, go)
-- `agents-skills/*` → copy to `~/.agents/skills/` (shared skills read by opencode and pi, incl. `webapp-testing/scripts/with_server.py`)
-- `pi/*` → `~/.pi/agent/` and `~/.pi/gentle-ai/models.json` (Section 7); `codex/*` → `~/.codex/` (Section 17); `herdr/*.txt` → consumed by `herdr plugin install` / `herdr integration install` (Section 16)
+- `agents-skills/*` → copy to `~/.agents/skills/` (shared skills read by opencode, incl. `webapp-testing/scripts/with_server.py`)
+- `harness/*` → `~/.harness/`, then `python3 ~/.harness/sync.py` generates every tool's config (Section 7); `codex/*` → `~/.codex/` (Section 17); `herdr/*.txt` → consumed by `herdr plugin install` / `herdr integration install` (Section 16)
 - `config/*` → the machine configs `install.sh` places (CLAUDE.md, claude-settings.json, claude-settings.local.json, opencode.jsonc, opencode-secondary.json, tui.json); machine-specific paths use the `__HOME__` token resolved at install time
 
 Or just run `./install.sh` (Quick Start) to do all of the above automatically — or `./install-claude.sh` for the Claude Code items only.
@@ -174,11 +171,8 @@ brew install --cask ghostty
 # opencode (anomalyco build) — see Section 6.1
 brew install anomalyco/tap/opencode
 # Engram persistent memory (third-party tap) — see Section 8.
-# The same tap also ships gentle-ai.
 brew install gentleman-programming/tap/engram
-brew install gentleman-programming/tap/gentle-ai   # configures gentle-pi (Section 7.4)
-# pi coding agent, Codex CLI, Herdr — see Sections 7, 17, 16
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# Codex CLI, Herdr — see Sections 17, 16
 npm install -g @openai/codex
 curl -fsSL https://herdr.dev/install.sh | sh
 ```
@@ -198,8 +192,7 @@ wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/sha
 echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 sudo apt update && sudo apt install terraform -y
 
-# pi coding agent, Codex CLI, Herdr — see Sections 7, 17, 16
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# Codex CLI, Herdr — see Sections 17, 16
 npm install -g @openai/codex
 curl -fsSL https://herdr.dev/install.sh | sh
 ```
@@ -219,8 +212,7 @@ sudo dnf install -y dnf-plugins-core
 sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
 sudo dnf install -y terraform
 
-# pi coding agent, Codex CLI, Herdr — see Sections 7, 17, 16
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# Codex CLI, Herdr — see Sections 17, 16
 npm install -g @openai/codex
 curl -fsSL https://herdr.dev/install.sh | sh
 ```
@@ -1665,50 +1657,32 @@ pip install playwright && python -m playwright install chromium
 
 ---
 
-## 7. pi coding agent + gentle-pi
+## 7. ~/.harness — single source of truth
 
-[pi](https://pi.dev) is a small terminal coding agent; [gentle-pi](https://pi.dev/packages/gentle-pi) adds the ODD/SDD workflow, packaged subagents and a native review flow. Here it mirrors the opencode policy: NaN by default at thinking low, Claude only on gentle-pi's review lenses at effort low with an 8192-token cap. Verified live on 2026-09-21 (wire-recorded requests, guard tests, a 14-item harness slice: pi 26/28 vs opencode 26/28 over two runs).
-
-### 7.1 Installation
+Agents, skills, rules, hooks and the instruction files are canonical in `~/.harness` (a git repo).
+Claude Code, opencode and Codex all receive **generated** copies; every generated file carries a
+`GENERATED by ~/.harness/sync.py - DO NOT EDIT` banner. Never edit a tool's own directory.
 
 ```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent   # pi 0.87.x, Node >= 22.19 (Section 3.3)
-brew install gentleman-programming/tap/gentle-ai                    # 3.4.x, configurator for gentle-pi (Linux: release binary from its GitHub repo)
-pi install npm:gentle-pi                                            # then: gentle-ai sync --agents pi
+python3 ~/.harness/sync.py --dry-run   # preview
+python3 ~/.harness/sync.py             # apply (idempotent)
 ```
 
-`gentle-ai sync` writes its SDD skills into the **shared** `~/.agents/skills`, which opencode also loads. Move them to `~/.pi/agent/skills/` afterwards: `install.sh` does this on every run from the list in [`pi/gentle-skills.txt`](pi/gentle-skills.txt), the sync script excludes those names from `agents-skills/`, and `check-pi-harness.mjs` fails if they leak back. The native review flow refuses to run until the sync was done by the gentle-ai version the package bundles (`managed_assets_outdated`).
+Per-tool schemas genuinely differ, which is why generation is used instead of symlinks: Claude uses
+`tools: A, B` plus `model: sonnet`; opencode uses a `permission:` map and NaN model ids; Codex uses
+`.toml`. Emitting the wrong shape breaks the tool outright.
 
-Headless use: `pi -p --no-session --mode json "<prompt>" < /dev/null` — pi (and `codex exec`) hang on an open stdin.
+Three enforcement hooks ship with it, added because measurement showed prose rules do not hold. On a
+10-probe compliance suite (6 runs per arm, Claude Sonnet 5) every hook-backed rule scored 6/6 while
+prose-only rules failed; overall 47/60 to 57/60, p=0.0136.
 
-### 7.2 Config
+| hook | event | effect |
+|---|---|---|
+| `md-approval-guard.sh` | PreToolUse Write/Edit | asks before creating a NEW `.md` (prose alone scored 0/6) |
+| `force-push-guard.sh` | PreToolUse Bash | denies force-push without `--force-with-lease` |
+| `no-emoji-in-docs.sh` | PreToolUse Write/Edit | denies emoji in documentation files |
+| `verify-after-edit.sh` | Stop | blocks once when files changed but no command ran afterwards |
 
-All files vendored under [`pi/`](pi/); place them with:
-```bash
-mkdir -p ~/.pi/agent/extensions ~/.pi/agent/scripts ~/.pi/gentle-ai
-cp pi/models.json pi/settings.json pi/AGENTS.md pi/mcp.json ~/.pi/agent/
-cp pi/gentle-ai-models.json ~/.pi/gentle-ai/models.json
-cp pi/extensions/*.ts ~/.pi/agent/extensions/
-cp pi/scripts/*.mjs ~/.pi/agent/scripts/
-```
-
-- `models.json`: provider `nan` (`api: openai-completions`, `apiKey: "$NAN_API_KEY"`, `compat.thinkingFormat: reasoning_effort`) with deepseek-v4-flash, glm5.3-flash, mimo-v2.5 (text+image only: a third modality makes pi reject the whole file), gemma4, qwen3.6. Each model maps pi thinking levels to NaN effort via `thinkingLevelMap` (`off → none`, `low → low`, …). The built-in `anthropic` provider stays, with `modelOverrides` capping `claude-sonnet-5` and `claude-opus-5` at `maxTokens: 8192`.
-- `settings.json`: default `nan/deepseek-v4-flash`, `defaultThinkingLevel: low`, `modelThinkingLevels` low for both Claude ids, `enabledModels` limited to `nan/*` plus the two Claude ids, `packages: ["npm:gentle-pi", "npm:pi-mcp-adapter"]`.
-- `AGENTS.md`: the opencode standards ported to pi, plus a Language rule (gentle-pi's persona prompt made deepseek answer English prompts in Spanish).
-- `mcp.json`: context7 through `pi-mcp-adapter`. `gentle-ai-models.json` → `~/.pi/gentle-ai/models.json`: per-agent routing, `review-*` lenses on `anthropic/claude-sonnet-5` at thinking low, `jd-judge-b` on `nan/glm5.3-flash` high (second model family), everything else `nan/deepseek-v4-flash` low. gentle-pi materializes it into `~/.pi/agent/subagents.json` on the next launch.
-- The Anthropic key goes in `~/.pi/agent/auth.json` (mode 600, `{"anthropic": {"type": "api_key", "key": "..."}}`) and is never vendored.
-
-### 7.3 Guard extension and checker
-
-pi has no permission system, so [`pi/extensions/harness-guards.ts`](pi/extensions/harness-guards.ts) (installed to `~/.pi/agent/extensions/`) blocks through the `tool_call` hook: the catastrophic bash denylist across ordinary spellings (global options, split flags, `env`/`sudo`/absolute paths), any read or write of secret and state files (`.env*`, `*.tfstate`, `*.pem`, `*.key`, `id_rsa*`, `auth.json`, `secrets/`) through bash or the file tools, `pi auth` (prints keys), nested `pi --no-extensions`, and gentle-pi's `gentle_review_capture_group` (runs every lens concurrently). It also fences the session model: on session start, model selection, input and before each turn, an Anthropic session model is switched back to NaN, and it fails closed (the input is swallowed) when NaN auth is missing. `pi --no-extensions` disables all of this; it is a policy guard, not a security boundary.
-
-[`pi/scripts/check-pi-harness.mjs`](pi/scripts/check-pi-harness.mjs) (installed to `~/.pi/agent/scripts/`, run with `node ~/.pi/agent/scripts/check-pi-harness.mjs`) validates the config, the routing, the materialized profiles, forbids an Anthropic `baseUrl` override, and runs [`test-pi-guards.mjs`](pi/scripts/test-pi-guards.mjs) (`node --experimental-strip-types`), which imports the extension with a fake ExtensionAPI and asserts about 70 decisions.
-
-### 7.4 gentle-pi
-
-Agents shipped: `gentle-ai-explore/verify/worker`, `jd-*`, four `review-*` lenses, `sdd-*`. Subagents run as `pi --mode rpc` children with the routed model; review lenses run in-process through the review relay with their own routed model. The native review (`/gentle:review-mode enable`, then `gentle_review inspect → start → consent → capture`) needs a human consent answer per candidate and shows findings as ids and severities only. On the same unsafe Django migration, opencode's `/verify` and `/council` returned BLOCK with the real blockers while gentle-pi's review approved it with informational findings, so **opencode remains the primary harness; pi is the cheaper secondary** for exploration and implementation. Slash commands (`/gentle:status`, `/gentle:doctor`, `/gentle:usage`) work only in the interactive TUI.
-
----
 
 ## 8. Engram (Persistent Memory)
 
@@ -1734,7 +1708,6 @@ This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary ins
 | Tool | Wiring | File |
 |---|---|---|
 | opencode | `mcp.engram` MCP server (`engram mcp --tools=agent`) | `~/.config/opencode/opencode.jsonc` |
-| pi | none by default — gentle-pi lists `gentle-engram` as an optional companion package | — |
 | Claude Code | none — the vendored Claude setup is Engram-free by design (Section 5.7 Claude-only policy) | — |
 
 ### 8.4 Shared memory policy (AGENTS.md)
@@ -1979,10 +1952,8 @@ Copy this list and check off each item:
 - [ ] `~/.opencode/opencode.json` created (empty plugins)
 - [ ] Verification: `opencode debug info` shows only `oh-my-openagent@4.16.1` (exact pin)
 
-**pi + gentle-pi**
 - [ ] `pi --version` (0.87.x) and `gentle-ai --version` (3.4.x)
 - [ ] `~/.pi/agent/{models.json,settings.json,AGENTS.md,mcp.json}` placed; `~/.pi/agent/auth.json` written (mode 600)
-- [ ] `pi install npm:gentle-pi` done, `gentle-ai sync --agents pi` run, SDD skills moved to `~/.pi/agent/skills/`
 - [ ] `node ~/.pi/agent/scripts/check-pi-harness.mjs` passes
 - [ ] `pi -p --no-session "Reply OK" </dev/null` answers on nan/deepseek-v4-flash
 
@@ -2097,7 +2068,6 @@ git diff                              # review EVERY change before committing
 
 What it does:
 
-1. Stages the live config (Claude Code agents/skills/hooks/rules/CLAUDE.md/settings, opencode agents/commands/plugins/scripts/configs + AGENTS.md, `~/.agents/skills` as `agents-skills/`, pi configs/extension/scripts and gentle-pi routing as `pi/`, a curated Codex `config.toml` plus AGENTS.md and hooks as `codex/`, Herdr plugin and integration manifests as `herdr/`) into a temp dir. The live side is never modified. Files that tools install themselves (Herdr hooks/plugins, gentle-ai synced skills, Claude's `skills/synced` cache) are excluded; pi, codex and herdr are staged all-or-nothing and skipped when the tool is absent.
 2. Templatizes machine paths (`$HOME` → `__HOME__`) before sanitizing.
 3. Applies the sanitize map, then enforces hard gates: zero sanitize-map tokens in content or file names, zero secret-shaped strings. Any failure aborts with the repo untouched and the staging dir kept for inspection.
 4. Mirrors the staging tree into the repo working tree. Protected files (`agents/airbyte.md`, `skills/scalr-deploy/SKILL.md`) keep the repo version — they carry intentional `REQUIRES SECRET` annotations absent from live.

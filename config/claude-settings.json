@@ -14,9 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/auto-sync.sh",
-            "statusMessage": "Syncing memory to Obsidian...",
-            "async": true
+            "command": "__HOME__/.claude/hooks/auto-sync.sh"
           }
         ]
       },
@@ -27,6 +25,14 @@
             "command": "~/.claude/hooks/rotate-logs.sh",
             "statusMessage": "Rotating hook logs...",
             "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.harness/hooks/verify-after-edit.sh"
           }
         ]
       }
@@ -125,6 +131,33 @@
             "command": "~/.claude/hooks/test-tamper-guard.sh",
             "timeout": 10,
             "statusMessage": "Checking for test tampering"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.harness/hooks/md-approval-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.harness/hooks/force-push-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.harness/hooks/no-emoji-in-docs.sh"
           }
         ]
       }
