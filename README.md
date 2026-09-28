@@ -1699,7 +1699,7 @@ Engram is a local, third-party persistent-memory store for AI agents. It backs o
 brew install gentleman-programming/tap/engram
 ```
 
-This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary installs to `/opt/homebrew/bin/engram` on Apple Silicon macOS. The same tap also ships `gentle-ai` (`brew install gentleman-programming/tap/gentle-ai`).
+This is a third-party Homebrew tap (`gentleman-programming/tap`). The binary installs to `/opt/homebrew/bin/engram` on Apple Silicon macOS.
 
 > **Linux note:** these configs assume the macOS Homebrew prefix `/opt/homebrew`, but the engram path is resolved dynamically — opencode launches it by name (`engram mcp --tools=agent`). For a manual install on Linux, just ensure `engram` is on `PATH`.
 
@@ -1885,7 +1885,7 @@ ultrawork                # (in any prompt) Full parallel orchestration
 ```bash
 pi                                        # interactive (gentle shell)
 pi -p --no-session --mode json "task" </dev/null
-node ~/.pi/agent/scripts/check-pi-harness.mjs
+python3 ~/.harness/sync.py --dry-run
 herdr                                     # attach the persistent session
 herdr agent list                          # agents running in panes and their state
 ```
@@ -1952,9 +1952,7 @@ Copy this list and check off each item:
 - [ ] `~/.opencode/opencode.json` created (empty plugins)
 - [ ] Verification: `opencode debug info` shows only `oh-my-openagent@4.16.1` (exact pin)
 
-- [ ] `pi --version` (0.87.x) and `gentle-ai --version` (3.4.x)
-- [ ] `~/.pi/agent/{models.json,settings.json,AGENTS.md,mcp.json}` placed; `~/.pi/agent/auth.json` written (mode 600)
-- [ ] `node ~/.pi/agent/scripts/check-pi-harness.mjs` passes
+- [ ] `python3 ~/.harness/sync.py --dry-run` reports only "same" (config generated and in sync)
 - [ ] `pi -p --no-session "Reply OK" </dev/null` answers on nan/deepseek-v4-flash
 
 **Herdr**
