@@ -92,6 +92,10 @@ def main():
             for p in srcd.rglob("*"):
                 if p.is_file():
                     rel = p.relative_to(srcd)
+                    # `synced/` is Claude Code's per-account skill cache; its paths carry org ids
+                    # and the tool re-creates it. It must never reach the shared dir or a repo.
+                    if rel.parts and rel.parts[0] == "synced":
+                        continue
                     r = write(TARGETS[tool] / kind / rel, p.read_bytes(), dry)
                     counts[f"{tool}:{kind}:{r}"] = counts.get(f"{tool}:{kind}:{r}", 0) + 1
     print(("DRY RUN " if dry else "") + "sync result: " + json.dumps(counts, indent=2, default=str))

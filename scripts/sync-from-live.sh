@@ -109,7 +109,7 @@ stage_dir "$LIVE_HOME/.claude/agents"            agents
 # symlink into that tool's own install. Neither is ours to vendor.
 stage_dir "$LIVE_HOME/.claude/skills"            skills --exclude 'synced/' --exclude 'terminal-browser'
 stage_dir "$LIVE_HOME/.claude/hooks"             hooks --exclude 'engram-sync.*' --exclude 'herdr-*'
-stage_dir "$LIVE_HOME/.agents/skills"            agents-skills -L   # shared skills dir (opencode reads it); resolve symlinks
+stage_dir "$LIVE_HOME/.agents/skills"            agents-skills -L --exclude 'synced/' --exclude 'terminal-browser'   # shared skills dir (opencode reads it); resolve symlinks
 stage_dir "$LIVE_HOME/.config/opencode/agents"   opencode-agents
 stage_dir "$LIVE_HOME/.config/opencode/commands" opencode-commands
 stage_dir "$LIVE_HOME/.config/opencode/plugins"  opencode-plugins --exclude 'herdr-*'
