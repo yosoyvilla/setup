@@ -18,11 +18,11 @@ Identify affected components, root cause, and whether a test already covers this
 ```bash
 git checkout -b fix/$ARGUMENTS
 # For larger or riskier fixes, use a worktree for isolation:
-# Codex --worktree fix-$ARGUMENTS
+# claude --worktree fix-$ARGUMENTS
 ```
 
 ## 3. Investigate
-Search the codebase for affected files. Understand root cause before writing any code. Check project AGENTS.md for conventions specific to this repo.
+Search the codebase for affected files. Understand root cause before writing any code. Check project CLAUDE.md for conventions specific to this repo.
 
 ## 4. Spec (required before any code)
 Use the `spec-driven-development` skill. For a bug fix, the spec is brief but must include:
@@ -36,13 +36,13 @@ Minimal fix that addresses the issue. No unrelated cleanup.
 
 ## 6. Test
 
-**project-c (pnpm monorepo):** `pnpm test` or `pnpm -F <package> test`
+**the e-commerce platform (pnpm monorepo):** `pnpm test` or `pnpm -F <package> test`
 
-**project-a (Go):** `go test ./...` in affected package(s)
+**the EdTech platform (Go):** `go test ./...` in affected package(s)
 
-**project-b (PHP):** check project Makefile or CI script for test command
+**the real-estate portals (PHP):** check project Makefile or CI script for test command
 
-**project-b (Python/portal-1):** `pytest`
+**the real-estate portals (Python/a Python portal):** `pytest`
 
 **Personal/Crewgent:** `pytest` (backend) / `pnpm test` (frontend)
 
@@ -55,13 +55,13 @@ git diff --stat   # only relevant files changed — no unrelated noise
 
 Lint + type check per project:
 
-**project-c:** `pnpm lint && pnpm typecheck`
+**the e-commerce platform:** `pnpm lint && pnpm typecheck`
 
-**project-a (Go):** `golangci-lint run ./...`
+**the EdTech platform (Go):** `golangci-lint run ./...`
 
-**project-b (Python/portal-1):** `ruff check .` or `flake8`
+**the real-estate portals (Python/a Python portal):** `ruff check .` or `flake8`
 
-**project-b (PHP):** check CI config for lint command (phpstan, phpcs)
+**the real-estate portals (PHP):** check CI config for lint command (phpstan, phpcs)
 
 **Personal/Crewgent:** `ruff check .` (backend) / `pnpm typecheck` (frontend)
 

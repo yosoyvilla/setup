@@ -41,7 +41,7 @@ DRY_RUN=0
 PROTECTED="agents/airbyte.md skills/scalr-deploy/SKILL.md"
 
 # Repo dirs fully mirrored from staging (rsync --delete).
-MANAGED_DIRS="agents skills hooks rules agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts harness codex herdr"
+MANAGED_DIRS="agents skills hooks agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts harness codex herdr"
 # Managed dirs that may legitimately be absent on a machine without that tool (skipped, never deleted).
 OPTIONAL_DIRS="codex herdr"
 is_optional(){ case " $OPTIONAL_DIRS " in *" $1 "*) return 0;; *) return 1;; esac; }
@@ -109,7 +109,6 @@ stage_dir "$LIVE_HOME/.claude/agents"            agents
 # symlink into that tool's own install. Neither is ours to vendor.
 stage_dir "$LIVE_HOME/.claude/skills"            skills --exclude 'synced/' --exclude 'terminal-browser'
 stage_dir "$LIVE_HOME/.claude/hooks"             hooks --exclude 'engram-sync.*' --exclude 'herdr-*'
-stage_dir "$LIVE_HOME/.claude/rules"             rules
 stage_dir "$LIVE_HOME/.agents/skills"            agents-skills -L   # shared skills dir (opencode reads it); resolve symlinks
 stage_dir "$LIVE_HOME/.config/opencode/agents"   opencode-agents
 stage_dir "$LIVE_HOME/.config/opencode/commands" opencode-commands
@@ -123,7 +122,6 @@ if [ -d "$LIVE_HOME/.harness" ]; then
   stage_dir  "$LIVE_HOME/.harness/agents"       harness/agents
   stage_dir  "$LIVE_HOME/.harness/instructions" harness/instructions
   stage_dir  "$LIVE_HOME/.harness/hooks"        harness/hooks
-  stage_dir  "$LIVE_HOME/.harness/rules"        harness/rules
   stage_file "$LIVE_HOME/.harness/sync.py"      harness/sync.py
   stage_file "$LIVE_HOME/.harness/README.md"    harness/README.md
   require_all harness sync.py README.md instructions/CLAUDE.md instructions/AGENTS.md

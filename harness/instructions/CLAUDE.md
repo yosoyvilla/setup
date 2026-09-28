@@ -8,7 +8,9 @@
 - Before changing anything, confirm at 95%+ that it will not break existing behaviour.
 
 ## Review
-- **Adversarial check on every non-trivial change.** A reviewer gets the diff only, never your
+- **Adversarial check applies to behaviour-changing diffs: >1 file, or any infra/config change.**
+  Excluded: doc-only, formatting-only, rename-only. A workaround needing a paragraph-long
+  justification comment means the code is wrong - fix the code. A reviewer gets the diff only, never your
   reasoning, and is asked "what would make this fail?" — not "does this look right?".
 - **Council check for high-risk work** (production, auth/IAM, data, multi-account): 2+ reviewers
   on different angles, dispatched in parallel so they cannot anchor on each other.
@@ -45,6 +47,17 @@
 - Restate remaining acceptance criteria every ~5 steps, or after any result that changes
   your understanding.
 
+## Workflow
+- **Fix the workflow, not the output.** When an agent or skill produces the same bad pattern twice,
+  edit the agent or skill definition rather than hand-fixing instances.
+- **Trial run before fan-out.** Before any bulk or parallel operation over 3+ similar items, run
+  2-3 representative items first, review, then scale. Never fan out an unproven workflow.
+- Assert every installed artifact has a repo counterpart; a committed wrapper whose helper exists
+  only on the box is a half-versioned system.
+- Fold every runtime config change into provisioning in the same change, and read the platform
+  schema instead of assuming a key exists.
+- Pass nested scripts to `ssh` via base64 rather than layered quoting.
+
 ## Scope
 - **Classify first.** Analyze / review / explain / investigate / check => the deliverable is
   FINDINGS, NOT CHANGES. Do not edit files; do not mutate shared or persistent state.
@@ -80,6 +93,8 @@
 - A vendor-composed error label is the caller's wording, not the system's; the numeric code is what
   the system returned.
 - Do not diagnose stored data from a customer-facing screen; validate against the system's own rows.
+- When the reason lives in a response body that is not logged, ask for the raw body rather than
+  guessing; logging the reason on 4xx is the product fix that closes the class.
 
 ## Engineering
 - KISS. Simplest solution that works. Overengineering is a defect, not diligence: before adding an
@@ -93,9 +108,18 @@
 4 apply, 5 verify the result. Never proceed on an unobserved tool result.
 
 ## Editing discipline
+- Build the offline self-test early and run it after every edit; it catches defects reading does not.
+- After an interrupted or aborted subagent, run the FULL gate, not only the test suite.
+- Prefer Read/Write/Edit tools over shell text manipulation for file work.
+- Never pipe a password to `sudo -S` or anything else. `sudo -n` only; if it needs a password, stop
+  and report.
 - Multi-line replaces need an explicit END anchor. Re-read a file between edits to it.
 - After adding a symbol in a batched edit, grep to prove it landed.
 - Before overwriting a table row or column, check what it was.
+- Batch related edits into one call; line anchors are positional, not content-addressed.
+- Nested heredocs need distinct delimiters. A heredoc supplying a program on stdin cannot also
+  receive piped data - pass data via argv or the environment.
+- After a deliberate-break experiment, verify the restore actually landed; do not assume the undo ran.
 
 ## Agents
 Tier 1 (main conversation): simple tasks, questions, single-file edits, exploration.
@@ -125,7 +149,9 @@ Blocked / Next Steps). Overwrite; do not append.
   evidence (test results, diffs you will judge). No rtk hook is installed for Claude Code.
 - Non-interactive shell: no editors or pagers, no interactive flags. Use documented
   non-interactive flags (`-y`, `--no-edit`, `--no-pager`, `--no-input`), `sudo -n`, and
-  `ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new`. Never `StrictHostKeyChecking=no`.
+  `ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10`. Never
+  `StrictHostKeyChecking=no`. Set `GIT_TERMINAL_PROMPT=0`/`DEBIAN_FRONTEND`/`PIP_NO_INPUT` per
+  command only, never globally.
   Stop and report rather than blanket-approving prompts.
 
 ## Knowledge base

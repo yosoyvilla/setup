@@ -40,7 +40,7 @@ Not required for: single-line typo fixes, documentation edits, variable renaming
 
 ### Infrastructure / Terraform Spec
 ```markdown
-## Infra Spec: <what we're changing> [project: project-a|project-b|project-c|project-d]
+## Infra Spec: <what we're changing> [project: the EdTech platform|the real-estate portals|the e-commerce platform|the payments platform]
 
 **Current state:** <what exists today>
 **Target state:** <expected state after apply>
@@ -59,7 +59,7 @@ Not required for: single-line typo fixes, documentation edits, variable renaming
 
 ### Deployment Spec
 ```markdown
-## Deployment Spec: <service> → <version> [project: project-a|project-c|project-b]
+## Deployment Spec: <service> → <version> [project: the EdTech platform|the e-commerce platform|the real-estate portals]
 
 **Change:** <what's different from the current running version>
 
@@ -95,7 +95,7 @@ The spec feeds the plan. Tests prove the acceptance criteria. `verification-befo
 - **Spec written after code**: you're describing what you did, not what you meant to do — the entire point is lost.
 - **No non-goals**: leads to scope creep during implementation ("while I'm in here…").
 - **Missing rollback plan for infra**: you'll be improvising under pressure when something goes wrong.
-- **Mixing projects in one spec**: each spec covers one project. project-a infra and project-c app changes get separate specs even if related.
+- **Mixing projects in one spec**: each spec covers one project. the EdTech platform infra and the e-commerce platform app changes get separate specs even if related.
 
 ## Restate the plan as you go (added 2026-08-21, evidence-based)
 

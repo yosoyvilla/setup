@@ -1,6 +1,6 @@
 ---
 name: k8s-deploy
-description: Use when deploying, updating, or rolling back Kubernetes services. Covers project-c (EKS + ArgoCD), project-a (EKS + Helm + Traefik), and project-b (GKE + Helm + Traefik).
+description: Use when deploying, updating, or rolling back Kubernetes services. Covers the e-commerce platform (EKS + ArgoCD), the EdTech platform (EKS + Helm + Traefik), and the real-estate portals (GKE + Helm + Traefik).
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -9,19 +9,19 @@ Deploy or update: $ARGUMENTS
 
 ## 0. Get Cluster Context (required first step)
 
-**project-c (EKS, ArgoCD):**
+**the e-commerce platform (EKS, ArgoCD):**
 ```bash
-# Check project AGENTS.md for AWS profile
+# Check project CLAUDE.md for AWS profile
 kubectl config use-context <project-c-eks-context>
 ```
 
-**project-a (EKS, Traefik):**
+**the EdTech platform (EKS, Traefik):**
 ```bash
 awsume vt-tooling
 kubectl config use-context <vtpr|vtst>-eks
 ```
 
-**project-b (GKE, Traefik):**
+**the real-estate portals (GKE, Traefik):**
 ```bash
 gcloud container clusters get-credentials <cluster> --region <region> --project <gcp-project>
 ```
@@ -56,14 +56,14 @@ helm template <release> <chart> -f values-<env>.yaml
 
 ## 3. Deploy
 
-**project-c — ArgoCD (GitHub App: project-cbot):**
+**the e-commerce platform — ArgoCD (GitHub App: the e-commerce platformbot):**
 ```bash
 # Push Helm chart / values change to GitOps repo, then:
 argocd app sync <app>
 argocd app wait <app> --health
 ```
 
-**project-a + project-b — Helm direct:**
+**the EdTech platform + the real-estate portals — Helm direct:**
 ```bash
 helm upgrade --install <release> <chart> -f values-<env>.yaml -n <namespace>
 kubectl rollout status deployment/<name> -n <namespace>
@@ -78,13 +78,13 @@ kubectl logs -l app=<service> -n <namespace> --tail=50
 kubectl get endpoints <service> -n <namespace>
 ```
 
-**Traefik IngressRoute (project-b, project-a):**
+**Traefik IngressRoute (the real-estate portals, the EdTech platform):**
 ```bash
 kubectl get ingressroute -n <namespace>
 kubectl describe ingressroute <name> -n <namespace>
 ```
 
-**ExternalSecrets (project-b):**
+**ExternalSecrets (the real-estate portals):**
 ```bash
 kubectl get externalsecret -n <namespace>   # Ready=True means secrets synced from GCP Secret Manager
 ```
@@ -95,12 +95,12 @@ Run smoke test if the service exposes one. Check application logs for startup er
 
 ## 5. Rollback
 
-**project-c (ArgoCD):**
+**the e-commerce platform (ArgoCD):**
 ```bash
 argocd app rollback <app>  # rolls back to previous synced revision
 ```
 
-**project-a + project-b (Helm):**
+**the EdTech platform + the real-estate portals (Helm):**
 ```bash
 helm history <release> -n <namespace>            # find target revision
 helm rollback <release> <revision> -n <namespace>

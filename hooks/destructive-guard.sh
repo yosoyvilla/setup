@@ -67,16 +67,22 @@ elif printf '%s' "$CMD" | grep -qE '\bfind\b[^|;&]*-exec[[:space:]]+rm\b'; then
   REASON="find -exec rm"
 elif printf '%s' "$CMD" | grep -qE '\|[[:space:]]*xargs[^|;&]*\brm\b'; then
   REASON="xargs rm"
-elif printf '%s' "$CMD" | grep -qE '\bgit[[:space:]]+clean\b[^|;&]*-[a-zA-Z]*f'; then
+# Subcommand matchers allow GLOBAL OPTIONS between the command and its subcommand.
+# Requiring adjacency let `kubectl --context prod delete namespace`, `terraform -chdir=x apply`
+# and `git -C /repo clean -fd` through untouched (verified 2026-09-28). `[^|;&]*` still stops
+# at a shell separator so an unrelated later command cannot trigger a match.
+elif printf '%s' "$CMD" | grep -qE '\bgit\b[^|;&]*[[:space:]]clean\b[^|;&]*-[a-zA-Z]*f'; then
   REASON="git clean -f (deletes untracked files, unrecoverable)"
-elif printf '%s' "$CMD" | grep -qE '\bgit[[:space:]]+(reset[[:space:]]+--hard|checkout[[:space:]]+--[[:space:]]*\.|restore[[:space:]]+\.)'; then
+elif printf '%s' "$CMD" | grep -qE '\bgit\b[^|;&]*[[:space:]](reset[[:space:]]+--hard|checkout[[:space:]]+--[[:space:]]*\.|restore[[:space:]]+\.)'; then
   REASON="discards uncommitted work"
-elif printf '%s' "$CMD" | grep -qE '\b(terraform|tofu)[[:space:]]+(destroy|apply)\b'; then
+elif printf '%s' "$CMD" | grep -qE '\b(terraform|tofu)\b[^|;&]*[[:space:]](destroy|apply)\b'; then
   REASON="terraform state-changing operation"
-elif printf '%s' "$CMD" | grep -qE '\bkubectl[[:space:]]+delete\b'; then
+elif printf '%s' "$CMD" | grep -qE '\bkubectl\b[^|;&]*[[:space:]]delete\b'; then
   REASON="kubectl delete"
-elif printf '%s' "$CMD" | grep -qE '\bdrop[[:space:]]+(table|database|schema)\b'; then
+elif printf '%s' "$CMD" | grep -qiE '\bdrop[[:space:]]+(table|database|schema)\b'; then
   REASON="SQL DROP"
+elif printf '%s' "$CMD" | grep -qiE '\btruncate[[:space:]]+table\b|\bdelete[[:space:]]+from\b[^|;&]*(;|$)'; then
+  REASON="SQL bulk delete (TRUNCATE / DELETE FROM)"
 # Interpreters (added 2026-08-21). Every rule above keys off a COMMAND NAME, so an
 # inline interpreter one-liner reached none of them. These two rules require an
 # interpreter AND an actual deletion API / destructive shell-out, so read-only

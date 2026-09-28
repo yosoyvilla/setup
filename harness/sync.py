@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """harness sync - generate each tool's native config from the canonical source.
 Generated files carry a DO-NOT-EDIT header. Idempotent: running twice changes nothing."""
-import json, pathlib, sys, shutil
+import json, pathlib, sys
 
 H = pathlib.Path.home() / ".harness"
 HOME = pathlib.Path.home()
@@ -10,6 +10,10 @@ TARGETS = {
     "claude":   HOME / ".claude",
     "opencode": HOME / ".config" / "opencode",
     "codex":    HOME / ".codex",
+    # opencode loads skills from the SHARED dir, not from its own config dir. Generated opencode
+    # agents reference skills by name, so any skill they cite must land here or the reference
+    # dangles (caught live: networking cited confluent-networking, which opencode could not load).
+    "shared":   HOME / ".agents",
 }
 
 def agents():
@@ -19,7 +23,7 @@ def want(a, tool):
     only = a.get("only")
     return (tool in only) if only else True
 
-def yaml_frontmatter(a, tool):
+def yaml_frontmatter(a):
     out = ["---", f"name: {a['name']}", f"description: {a['description']}"]
     if a.get("model"): out.append(f"model: {a['model']}")
     if a.get("tools"): out.append(f"tools: {a['tools']}")
@@ -34,17 +38,24 @@ def gen_md(a, tool):
     if ov:
         fm = "---\n" + ov.rstrip() + f"\n# {BANNER}\n---\n\n"
         return fm + a["body"].rstrip() + "\n"
-    return yaml_frontmatter(a, tool) + a["body"].rstrip() + "\n"
+    return yaml_frontmatter(a) + a["body"].rstrip() + "\n"
 
-def toml_escape(s):
-    return s.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+def toml_basic_string(s):
+    """TOML basic string: escape backslash and double quote, collapse newlines."""
+    s = s.replace("\\", "\\\\").replace('"', '\\"')
+    return s.replace("\n", " ").strip()
 
 def gen_toml(a):
-    return (f'# {BANNER}\n'
-            f'name = "{a["name"]}"\n'
-            f'description = """{toml_escape(a["description"])}"""\n'
-            + (f'model = "{a["model"]}"\n' if a.get("model") else "")
-            + f'instructions = """\n{toml_escape(a["body"]).rstrip()}\n"""\n')
+    """Codex requires `developer_instructions`; a role file using `instructions` is silently
+    rejected with "must define developer_instructions" and the agent simply does not exist.
+    Verified live: all 18 generated roles were being ignored. Codex takes no `model` key.
+    The body goes in a literal (single-quote) block so backslashes pass through unchanged.
+    """
+    body = a["body"].rstrip().replace("'''", "'' '")   # a literal block cannot contain '''
+    return (f"# {BANNER}\n"
+            f'name = "{toml_basic_string(a["name"])}"\n'
+            f'description = "{toml_basic_string(a["description"])}"\n'
+            f"developer_instructions = '''\n{body}\n'''\n")
 
 def write(path, content, dry):
     """content may be str or bytes; binary assets in skills must survive."""
@@ -74,7 +85,7 @@ def main():
         counts["opencode:AGENTS.md"] = write(TARGETS["opencode"] / "AGENTS.md", ai.read_text(), dry)
         counts["home:AGENTS.md"] = write(HOME / "AGENTS.md", ai.read_text(), dry)
     # skills + rules + hooks: copy trees verbatim
-    for kind, dests in (("skills", ["claude"]), ("rules", ["claude"]), ("hooks", ["claude"])):
+    for kind, dests in (("skills", ["claude", "shared"]), ("rules", ["claude"]), ("hooks", ["claude"])):
         srcd = H / kind
         if not srcd.exists(): continue
         for tool in dests:

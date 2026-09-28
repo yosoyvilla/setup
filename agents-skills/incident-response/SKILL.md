@@ -1,8 +1,7 @@
 ---
 name: incident-response
-description: Use when investigating production outages, degraded performance, or unexpected behavior. Covers project-a (EKS + New Relic), project-c (EKS + ArgoCD + Loki), project-b (GKE + Traefik), and project-d (Dokploy).
+description: Use when investigating production outages, degraded performance, or unexpected behavior. Covers the EdTech platform (EKS + New Relic), the e-commerce platform (EKS + ArgoCD + Loki), the real-estate portals (GKE + Traefik), and the payments platform (Dokploy).
 user-invocable: true
-disable-model-invocation: true
 ---
 
 Investigate incident: $ARGUMENTS
@@ -16,7 +15,7 @@ Investigate incident: $ARGUMENTS
 
 ## 2. Gather Evidence
 
-### project-a (EKS + New Relic + Traefik)
+### the EdTech platform (EKS + New Relic + Traefik)
 ```bash
 awsume vt-tooling
 kubectl config use-context <vtpr|vtst>-eks
@@ -32,7 +31,7 @@ SELECT average(duration) FROM Transaction WHERE appName='<svc>' SINCE 1 hour ago
 SELECT * FROM Log WHERE service='<svc>' AND level='ERROR' SINCE 30 minutes ago
 ```
 
-### project-c (EKS + ArgoCD + Loki/Grafana)
+### the e-commerce platform (EKS + ArgoCD + Loki/Grafana)
 ```bash
 # ArgoCD — check sync/health before touching pods
 argocd app list | grep -Ev "Synced|Healthy"
@@ -46,7 +45,7 @@ kubectl exec -n <namespace> deploy/rabbitmq -- rabbitmqctl list_queues name mess
 ```
 Grafana/Loki: check cluster Grafana for error spikes and recent log tail for the affected service.
 
-### project-b (GKE + Traefik)
+### the real-estate portals (GKE + Traefik)
 ```bash
 gcloud container clusters get-credentials <cluster> --region <region> --project <gcp-project>
 kubectl get pods -A | grep -Ev "Running|Completed"
@@ -57,9 +56,9 @@ kubectl get externalsecret -A                 # ExternalSecrets → GCP Secret M
 kubectl describe externalsecret <name> -n <namespace>  # if secrets not syncing, pods won't start
 ```
 
-### project-d (Dokploy on EC2)
+### the payments platform (Dokploy on EC2)
 ```bash
-ssh project-d_3p_services
+ssh <payments-bastion-host>
 docker ps                          # running containers
 docker logs <container> --tail=100 --since 30m
 docker stats --no-stream           # CPU/memory snapshot
@@ -82,8 +81,8 @@ gh pr list --state merged --limit 5   # recent merged PRs across any GitHub repo
 ## 4. Mitigate (fastest first)
 1. **Rollback deploy**
    - K8s: `kubectl rollout undo deployment/<name>`
-   - ArgoCD (project-c): `argocd app rollback <app>`
-   - Dokploy (project-d): redeploy previous image via Dokploy UI
+   - ArgoCD (the e-commerce platform): `argocd app rollback <app>`
+   - Dokploy (the payments platform): redeploy previous image via Dokploy UI
 2. **Scale up** — `kubectl scale deployment/<name> --replicas=<n>`
 3. **Failover** — switch traffic to healthy region/cluster
 4. **Hotfix** — only if rollback would reintroduce a worse problem
@@ -133,8 +132,8 @@ Solr logs -> container log files -> repo greps -> dead-end concurrency tests.
 
 Before reporting a user-facing symptom, state what your test client is and whether it
 is a valid probe. Check: (a) your egress COUNTRY vs the target's IP Access Rules — a
-whitelisted country short-circuits the whole WAF (portal-4 whitelists CO, so a CO probe
-proves nothing about portal-4's rules); (b) whether your client is AUTOMATED — a headless
+whitelisted country short-circuits the whole WAF (if a zone whitelists your own country,
+a probe from it proves nothing about that zone's rules); (b) whether your client is AUTOMATED — a headless
 browser is classified as a bot by SBFM and blocked where a real browser passes; (c)
 whether the target's BIC/bot rules turn bare curl into a false 403. Prefer independent
 telemetry (edge/CDN analytics) over your own request. Test-method validity is part of

@@ -80,6 +80,14 @@
             "command": "echo \"Knowledge base: ~/Documents/obsidian-vault/ (sync: yosoyvilla/obsidian-vault)\" && echo \"When modifying Claude Code config (agents/skills/hooks/rules/plugins), update the vault and push.\" && if [ -f .claude/agent-context/lead.md ]; then echo \"Active lead plan:\" && head -5 .claude/agent-context/lead.md; fi"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.harness/hooks/harness-sync-on-start.sh"
+          }
+        ]
       }
     ],
     "Notification": [

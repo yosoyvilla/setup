@@ -1,21 +1,21 @@
 ---
 name: sync-vault
-description: Sync the Obsidian knowledge base with current Codex configuration. Use after modifying agents, skills, hooks, rules, plugins, or settings.
+description: Sync the Obsidian knowledge base with current Claude Code configuration. Use after modifying agents, skills, hooks, rules, plugins, or settings.
 user-invocable: true
 disable-model-invocation: true
 ---
 
-Sync the Obsidian vault at ~/Documents/obsidian-vault/ with the current Codex configuration.
+Sync the Obsidian vault at ~/Documents/obsidian-vault/ with the current Claude Code configuration.
 
 ## Steps
 
 1. Read the current state of all configuration:
-   - ~/.Codex/settings.json (model, plugins, hooks)
-   - ~/.Codex/settings.local.json (permissions)
-   - ~/.Codex/AGENTS.md (global rules)
-   - ~/.Codex/agents/*.md (all agents)
-   - ~/.Codex/skills/*/SKILL.md (all skills)
-   - ~/.Codex/rules/*.md (shared rules)
+   - ~/.claude/settings.json (model, plugins, hooks)
+   - ~/.claude/settings.local.json (permissions)
+   - ~/.claude/CLAUDE.md (global rules)
+   - ~/.claude/agents/*.md (all agents)
+   - ~/.claude/skills/*/SKILL.md (all skills)
+   - ~/.claude/rules/*.md (shared rules)
 
 2. Read the current vault documentation:
    - ~/Documents/obsidian-vault/claude-code/setup.md

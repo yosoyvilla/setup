@@ -3,9 +3,9 @@ name: terraform-review
 description: Reviews Terraform code for best practices, security, and cost. Use when reviewing .tf files, planning infrastructure changes, or checking Terraform plans.
 ---
 
-Systematically check the following. Apply the AWS sections to project-a/project-c/project-d, the GCP section to project-b.
+Systematically check the following. Apply the AWS sections to the EdTech platform/the e-commerce platform/the payments platform, the GCP section to the real-estate portals.
 
-## Security — AWS (project-a, project-c, project-d)
+## Security — AWS (the EdTech platform, the e-commerce platform, the payments platform)
 - No hardcoded secrets, API keys, or passwords in `.tf` files
 - IAM: least privilege — no `*` actions on `*` resources in prod
 - Encryption at rest: S3, RDS, EBS, EFS
@@ -13,7 +13,7 @@ Systematically check the following. Apply the AWS sections to project-a/project-
 - Security groups: no `0.0.0.0/0` ingress on non-HTTP(S) ports
 - KMS keys for sensitive data
 
-## Security — GCP (project-b)
+## Security — GCP (the real-estate portals)
 - No `allUsers` or `allAuthenticatedUsers` on storage buckets or APIs
 - Use predefined `roles/` — custom roles only when predefined don't fit
 - Cloud SQL: `require_ssl = true`, `ipv4_enabled = false` (private-only unless justified)
@@ -30,12 +30,12 @@ Systematically check the following. Apply the AWS sections to project-a/project-
 - Spot/preemptible instances for non-critical or batch workloads
 
 ## Best Practices
-- Remote state with locking (S3+DynamoDB for AWS; Scalr for project-a tf-aws)
+- Remote state with locking (S3+DynamoDB for AWS; Scalr for the EdTech platform tf-aws)
 - Data sources over hardcoded resource IDs
 - Module versions pinned — not `source = "module?ref=main"`
 - All resources tagged: `Name`, `Environment`, `Team`, `ManagedBy=terraform`
 - `terraform fmt` applied, `terraform validate` clean
-- `tflint` passes (enforced in project-a CI via GitHub Actions)
+- `tflint` passes (enforced in the EdTech platform CI via GitHub Actions)
 
 ## Reliability
 - Multi-AZ for production databases and critical services
