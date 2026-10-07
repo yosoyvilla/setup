@@ -76,7 +76,7 @@ This setup runs several independent AI coding tools. Each has its own config dir
 
 | Tool | Config | Agents | Default model | Auth |
 |---|---|---|---|---|
-| Claude Code (`claude`) | `~/.claude/` | `~/.claude/agents/*.md` | `claude-fable-5-1[1m]` | Anthropic account |
+| Claude Code (`claude`) | `~/.claude/` | `~/.claude/agents/*.md` | `opusplan` (Opus 5.5 in plan mode, Sonnet 5.5 for execution; Fable 5.1 via `/model fable` on demand) | Anthropic account |
 | opencode | `~/.config/opencode/` | oh-my-openagent + 21 custom agents | `nan/deepseek-v4-flash-low`; Claude on two review seats | `NAN_API_KEY` + Anthropic key in `auth.json` |
 | Codex CLI | `~/.codex/` | none (blind reviewer) | `gpt-5.6-sol` high | `codex login` |
 | oh-my-pi (`omp`) | `~/.omp/agent/` | 18 generated agents (`~/.omp/agent/agents`, from `~/.harness`) + bundled | `nan/glm5.3-flash` high; mimo on fan-out roles, deepseek on plan/slow | `NAN_API_KEY` |
@@ -821,7 +821,7 @@ When compacting, preserve: current plan from lead agent, file paths modified, te
 
 ### 5.3 Settings JSON
 
-File: `~/.claude/settings.json` — vendored as [`config/claude-settings.json`](config/claude-settings.json) (the single source; this README no longer carries an inline copy, which had drifted). `install-claude.sh` places it with `__HOME__` resolved. Top-level keys in the vendored file: `cleanupPeriodDays`, `env`, `attribution`, `model`, `enabledPlugins`, `extraKnownMarketplaces`, `autoDreamEnabled`, `skipWorkflowUsageWarning`, `agentPushNotifEnabled`, `skipAutoPermissionPrompt`.
+File: `~/.claude/settings.json` — vendored as [`config/claude-settings.json`](config/claude-settings.json) (the single source; this README no longer carries an inline copy, which had drifted). `install-claude.sh` places it with `__HOME__` resolved. Top-level keys in the vendored file: `cleanupPeriodDays`, `env` (includes `CLAUDE_CODE_SUBAGENT_MODEL=sonnet`, which moves only the built-in subagents off the parent model), `attribution`, `model` (`opusplan`: Opus 5.5 in plan mode, Sonnet 5.5 for execution; chosen 2026-10-07 after a 7-day transcript audit showed 98% of tokens on Opus/Fable with 264k to 373k context per call under the old `claude-fable-5-1[1m]` default), `modelSettings` (effort: opus-5-5 high, sonnet-5-5 medium, fable-5-1 high), `enabledPlugins`, `extraKnownMarketplaces`, `autoDreamEnabled`, `skipWorkflowUsageWarning`, `agentPushNotifEnabled`, `skipAutoPermissionPrompt`.
 
 Hooks registered in the vendored file (one row per event; scripts live in `hooks/`, Section 5.7):
 
@@ -1901,8 +1901,8 @@ herdr agent list                          # agents running in panes and their st
 
 | Scenario | Tool | Model |
 |---|---|---|
-| Architecture / planning | Claude Code | opus[1m] (Opus, 1M context) |
-| Code implementation | Claude Code | sonnet / opus[1m] |
+| Architecture / planning | Claude Code | plan mode on Opus 5.5 high (`opusplan`); Fable 5.1 via `/model fable` for the hardest problems |
+| Code implementation | Claude Code | Sonnet 5.5 medium (`opusplan` execution model); built-in subagents forced to Sonnet via `CLAUDE_CODE_SUBAGENT_MODEL` |
 | Security/cost review | Claude Code | haiku (advisory agents) |
 | Orchestration, search, execution | opencode | nan/deepseek-v4-flash-low (fallback glm5.3-flash-low) |
 | Adversarial review / plan review | opencode | anthropic/claude-sonnet-5 (`@critic`) / claude-opus-5 (`@plan-critic`), effort low, 8k cap |
@@ -1930,7 +1930,7 @@ Copy this list and check off each item:
 - [ ] Installed (`claude --version`)
 - [ ] Authenticated (run `claude`)
 - [ ] `~/.claude/CLAUDE.md` created
-- [ ] `~/.claude/settings.json` created (model `opus[1m]`)
+- [ ] `~/.claude/settings.json` created (model `opusplan`, `modelSettings` effort per model, `CLAUDE_CODE_SUBAGENT_MODEL=sonnet`)
 - [ ] `~/.claude/agents/` populated (18 agent files, incl. `doc-reviewer`)
 - [ ] `~/.claude/skills/` populated (incl. `herdr` and `dagr-producer`)
 - [ ] `~/.claude/rules/` created
