@@ -1891,7 +1891,7 @@ omp                                       # interactive, glm5.3-flash (Ctrl+P cy
 omp -p --mode json --no-title "task"      # headless
 omp -p --model nan/mimo-v2.6-flash --max-time 15m "chore"   # background chore on the mimo pool, capped
 omp models nan                            # verify the provider catalog
-pi -p --mode json "task"                  # plain Pi, single model (glm)
+pi -p --mode json "task" </dev/null       # plain Pi, single model (glm); stdin must be closed in scripts
 python3 ~/.harness/sync.py --dry-run
 herdr                                     # attach the persistent session
 herdr agent list                          # agents running in panes and their state
@@ -2135,7 +2135,7 @@ Chosen from an isolated Docker benchmark of oh-my-pi 18.6.3, gentle-shell (gentl
 
 - `omp/config.yml`: model roles, cycle order, fallback chains, compaction, prewalk and advisor off, cache warming off, `enabledProviders: [claude]`, quiet startup. Every key verified with `omp config get`.
 - `omp/models.yml`: the `nan` provider (`openai-completions`, `apiKey: NAN_API_KEY`) with glm5.3-flash, deepseek-v4-flash, mimo-v2.6-flash and qwen3.8-flash, 1M context, 32k output.
-- `pi/models.json`, `pi/settings.json`: the same catalog for plain Pi; `defaultModel` glm5.3-flash, `cacheWarming: "off"`, compaction on, quiet startup.
+- `pi/models.json`, `pi/settings.json`: the same catalog for plain Pi (`apiKey: "$NAN_API_KEY"`; Pi 1.0 interpolates `$NAME`, a bare name is taken literally); `defaultModel` glm5.3-flash, `cacheWarming: "off"`, compaction on, quiet startup. Pi 1.0.4 needs Node 22.19+; on a machine whose PATH pins an older Node, install with the newer keg's npm (`--min-release-age=0`, or npm silently picks an old version) and launch through a pinned wrapper (this Mac: `~/.local/bin/pi` runs the Homebrew node 26 keg). Headless `pi -p` reads stdin, so add `</dev/null` in scripts.
 
 ### 18.3 Shell helpers
 

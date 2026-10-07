@@ -3,13 +3,55 @@
     "nan": {
       "baseUrl": "https://api.nan.builders/v1",
       "api": "openai-completions",
-      "apiKey": "NAN_API_KEY",
-      "compat": { "supportsDeveloperRole": true },
+      "apiKey": "$NAN_API_KEY",
+      "compat": {
+        "supportsDeveloperRole": true
+      },
       "models": [
-        { "id": "glm5.3-flash",      "name": "GLM 5.3 Flash",       "reasoning": true, "input": ["text","image"], "contextWindow": 1048576, "maxTokens": 32768 },
-        { "id": "mimo-v2.6-flash",   "name": "Xiaomi MiMo V2.6 Flash","reasoning": true, "input": ["text","image"], "contextWindow": 1048576, "maxTokens": 32768 },
-        { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash",   "reasoning": true, "input": ["text","image"], "contextWindow": 1048576, "maxTokens": 32768 },
-        { "id": "qwen3.8-flash",     "name": "Qwen 3.8 Flash",      "reasoning": true, "input": ["text","image"], "contextWindow": 1048576, "maxTokens": 32768 }
+        {
+          "id": "glm5.3-flash",
+          "name": "GLM 5.3 Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 32768
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "name": "Xiaomi MiMo V2.6 Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 32768
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 32768
+        },
+        {
+          "id": "qwen3.8-flash",
+          "name": "Qwen 3.8 Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 32768
+        }
       ]
     }
   }
