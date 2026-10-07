@@ -43,17 +43,21 @@ OS=""
 case "$(uname -s)" in
   Darwin) OS="macos" ;;
   Linux)
-    if have apt-get; then OS="debian"; else
-      printf '%b\n' "${c_red}Unsupported Linux (no apt). This script supports macOS and Debian/Ubuntu.${c_off}"; exit 1
+    if have apt-get; then OS="debian";
+    elif have dnf; then OS="fedora";
+    else
+      printf '%b\n' "${c_red}Unsupported Linux (no apt or dnf). This script supports macOS, Debian/Ubuntu, and Fedora.${c_off}"; exit 1
     fi ;;
   *) printf '%b\n' "${c_red}Unsupported OS: $(uname -s)${c_off}"; exit 1 ;;
 esac
 section "Claude Code setup  |  OS: $OS  |  repo: $REPO_DIR"
 
-# ── minimal bootstrap: curl only (macOS ships it; bare Debian may not) ──
+# ── minimal bootstrap: curl only (macOS ships it; bare Debian/Fedora may not) ──
 if ! have curl && [ "$OS" = "debian" ]; then
   as_root apt-get update -y >/dev/null 2>&1
   as_root apt-get install -y curl ca-certificates >/dev/null 2>&1 && ok "curl (bootstrap)" || err "curl bootstrap"
+elif ! have curl && [ "$OS" = "fedora" ]; then
+  as_root dnf install -y curl ca-certificates >/dev/null 2>&1 && ok "curl (bootstrap)" || err "curl bootstrap"
 fi
 
 # ── Claude Code CLI — native installer, npm fallback ──────────────
@@ -94,7 +98,9 @@ cp "$REPO_DIR"/agents/*.md "$HOME/.claude/agents/" \
   && ok "$(ls "$REPO_DIR"/agents/*.md | wc -l | tr -d ' ') agents" || err "agents"
 cp -R "$REPO_DIR"/skills/* "$HOME/.claude/skills/" \
   && ok "skills (folders incl. support scripts)" || err "skills"
-cp "$REPO_DIR"/rules/*.md "$HOME/.claude/rules/" && ok "rules" || err "rules"
+if ls "$REPO_DIR"/rules/*.md >/dev/null 2>&1; then
+  cp "$REPO_DIR"/rules/*.md "$HOME/.claude/rules/" && ok "rules" || err "rules"
+else ok "rules folded into harness/instructions/CLAUDE.md — nothing to place (see ~/.harness sync)"; fi
 cp "$REPO_DIR"/hooks/*.sh "$HOME/.claude/hooks/" && chmod +x "$HOME/.claude/hooks/"*.sh \
   && ok "hooks (chmod +x)" || err "hooks"
 

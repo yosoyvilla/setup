@@ -35,8 +35,10 @@ OS=""
 case "$(uname -s)" in
   Darwin) OS="macos" ;;
   Linux)
-    if have apt-get; then OS="debian"; else
-      printf "${c_red}Unsupported Linux (no apt). This script supports macOS and Debian/Ubuntu.${c_off}\n"; exit 1
+    if have apt-get; then OS="debian";
+    elif have dnf; then OS="fedora";
+    else
+      printf "${c_red}Unsupported Linux (no apt or dnf). This script supports macOS, Debian/Ubuntu, and Fedora.${c_off}\n"; exit 1
     fi ;;
   *) printf "${c_red}Unsupported OS: $(uname -s)${c_off}\n"; exit 1 ;;
 esac
@@ -65,6 +67,17 @@ if [ "$OS" = "macos" ]; then
   for pkg in gh ripgrep fzf terraform terraform-docs kubectl helm jq; do
     brew list "$pkg" >/dev/null 2>&1 && ok "$pkg" || { brew install "$pkg" >/dev/null 2>&1 && ok "installed $pkg" || warn "skip $pkg"; }
   done
+elif [ "$OS" = "fedora" ]; then
+  as_root dnf install -y curl wget2 wget2-wget git gcc gcc-c++ make automake autoconf unzip ripgrep fzf jq zsh >/dev/null 2>&1 && ok "base packages" || err "dnf base packages"
+  # gh (in Fedora's default repos)
+  if ! have gh; then
+    as_root dnf install -y gh >/dev/null 2>&1 && ok "gh" || warn "gh install"
+  else ok "gh"; fi
+  # terraform (HashiCorp's own dnf repo)
+  if ! have terraform; then
+    as_root dnf5 config-manager addrepo --overwrite --from-repofile=https://rpm.releases.hashicorp.com/fedora/hashicorp.repo >/dev/null 2>&1
+    as_root dnf install -y terraform >/dev/null 2>&1 && ok "terraform" || warn "terraform install"
+  else ok "terraform"; fi
 else
   as_root apt-get update -y >/dev/null 2>&1 && ok "apt updated"
   as_root apt-get install -y curl wget git build-essential unzip ripgrep fzf jq zsh >/dev/null 2>&1 && ok "base packages" || err "apt base packages"
@@ -123,13 +136,13 @@ if ! have aws; then
   fi
 else ok "aws cli"; fi
 # kubectl (mac via brew above; linux direct)
-if ! have kubectl && [ "$OS" = "debian" ]; then
+if ! have kubectl && { [ "$OS" = "debian" ] || [ "$OS" = "fedora" ]; }; then
   curl -fsSLO "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
     && as_root install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && rm -f kubectl && ok "kubectl" || warn "kubectl"
 fi
 have kubectl && ok "kubectl present" || warn "kubectl missing"
 # helm (linux)
-if ! have helm && [ "$OS" = "debian" ]; then
+if ! have helm && { [ "$OS" = "debian" ] || [ "$OS" = "fedora" ]; }; then
   curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash >/dev/null 2>&1 && ok "helm" || warn "helm"
 fi
 have gcloud || todo "Install gcloud SDK: https://cloud.google.com/sdk/docs/install  (then: gcloud auth login)"
@@ -184,7 +197,7 @@ else ok "Engram present"; fi
 # ════════════════════════════════════════════════════════════════════
 section "Placing configs and assets"
 mkdir -p "$HOME/.config/opencode/agents" "$HOME/.config/opencode/commands" "$HOME/.config/opencode/scripts" \
-         "$HOME/.config/opencode/plugins" "$HOME/.agents/skills"\ "$HOME/.codex"
+         "$HOME/.config/opencode/plugins" "$HOME/.agents/skills" "$HOME/.codex"
 
 # Claude Code assets already placed by install-claude.sh (AI tools section)
 
@@ -198,12 +211,20 @@ cp "$REPO_DIR/oh-my-openagent.json" "$HOME/.config/opencode/oh-my-openagent.json
 cp "$REPO_DIR/AGENTS.md" "$HOME/.config/opencode/AGENTS.md" && ok "opencode AGENTS.md"
 cp "$REPO_DIR"/opencode-agents/*.md "$HOME/.config/opencode/agents/" && ok "opencode agents"
 cp "$REPO_DIR"/opencode-commands/*.md "$HOME/.config/opencode/commands/" && ok "opencode commands"
-cp "$REPO_DIR"/opencode-scripts/*.mjs "$HOME/.config/opencode/scripts/" && ok "opencode scripts (check-harness + harness-guards lib/tests)"
+cp "$REPO_DIR"/opencode-scripts/*.mjs "$REPO_DIR/opencode-scripts/package.json" "$REPO_DIR/opencode-scripts/package-lock.json" "$HOME/.config/opencode/scripts/" && ok "opencode scripts (check-harness + harness-guards lib/tests)"
+if have npm; then
+  (cd "$HOME/.config/opencode/scripts" && npm ci --no-audit --no-fund >/dev/null 2>&1 || npm install --no-audit --no-fund >/dev/null 2>&1) && ok "opencode scripts deps (yaml)" || warn "opencode scripts deps (run: npm install --prefix ~/.config/opencode/scripts)"
+fi
 if ls "$REPO_DIR"/opencode-plugins/*.js >/dev/null 2>&1; then
   cp "$REPO_DIR"/opencode-plugins/*.js "$HOME/.config/opencode/plugins/" && ok "opencode plugins (harness-guards)"
 fi
 
 # Shared skills dir (~/.agents/skills): read by opencode, pi and the Claude Code symlinks
+# Clear any symlinks left by a prior run's webapp-testing fixup (below) first: cp
+# would otherwise refuse to overwrite a dir-symlink with a real dir, or silently
+# write through a file-symlink into the Claude Code copy it points at.
+[ -L "$HOME/.agents/skills/webapp-testing/SKILL.md" ] && rm -f "$HOME/.agents/skills/webapp-testing/SKILL.md"
+[ -L "$HOME/.agents/skills/webapp-testing/scripts" ] && rm -f "$HOME/.agents/skills/webapp-testing/scripts"
 cp -R "$REPO_DIR"/agents-skills/* "$HOME/.agents/skills/" && ok "agents-skills → ~/.agents/skills (incl. webapp-testing/scripts)"
 # webapp-testing must be a SYMLINK to the Claude Code copy (single source of
 # truth; the harness checker enforces this topology)
