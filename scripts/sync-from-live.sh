@@ -193,7 +193,8 @@ fi
 if [ -f "$LIVE_HOME/.omp/agent/models.yml" ]; then
   stage_file "$LIVE_HOME/.omp/agent/config.yml" omp/config.yml
   stage_file "$LIVE_HOME/.omp/agent/models.yml" omp/models.yml
-  require_all omp config.yml models.yml
+  stage_file "$LIVE_HOME/.omp/profiles/claude/agent/config.yml" omp/profiles/claude/config.yml
+  require_all omp config.yml models.yml profiles/claude/config.yml
 else
   warn "oh-my-pi not configured here (~/.omp/agent/models.yml missing) — omp/ left as committed"
 fi

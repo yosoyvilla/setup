@@ -1,0 +1,47 @@
+# ~/.omp/profiles/claude/agent/config.yml -- `omp --profile claude`: Anthropic-only profile (Sonnet 5.5, Opus 5.5, Fable 5.1).
+# Separate auth, sessions and caches from the default NaN profile. Log in once with `/login anthropic` inside this profile.
+#
+# Cost logic (Anthropic list prices per MTok: Sonnet 5.5 $2 in / $10 out, Opus 5.5 $4 / $20, Fable 5.1 $10 / $50;
+# cache reads $0.20 / $0.20 / $0.25). Most of a coding turn is cached prompt, so the working model's output price and
+# effort dominate. Sonnet 5.5 at medium effort is the everyday model; Opus 5.5 plans; Fable 5.1 is the deliberate slot
+# for the hardest problems (Ctrl+P cycles Sonnet -> Opus -> Fable).
+modelRoles:
+  default: anthropic/claude-sonnet-5-5:medium   # everyday work; Sonnet 5.5's recalibrated effort: medium for agentic coding
+  plan:    anthropic/claude-opus-5-5:high       # plan mode: short, judgment-heavy, worth Opus
+  slow:    anthropic/claude-fable-5-1:high      # deliberate deep reasoning only (5x Sonnet's price)
+  task:    anthropic/claude-sonnet-5-5:low      # subagents and fan-out: low effort = fewer, consolidated tool calls
+  smol:    anthropic/claude-sonnet-5-5:low
+  tiny:    anthropic/claude-sonnet-5-5:low
+  commit:  anthropic/claude-sonnet-5-5:low
+  advisor: anthropic/claude-opus-5-5:medium     # only used if advisor.enabled is switched on for high-risk work
+cycleOrder: [default, plan, slow]
+
+retry:
+  enabled: true
+  modelFallback: true
+  fallbackRevertPolicy: cooldown-expiry
+  fallbackChains:                               # rate limits / overload move the turn one tier, then return on cooldown
+    default: [anthropic/claude-opus-5-5:medium]
+    plan:    [anthropic/claude-sonnet-5-5:high]
+    slow:    [anthropic/claude-opus-5-5:xhigh]
+    task:    [anthropic/claude-opus-5-5:low]
+    smol:    [anthropic/claude-opus-5-5:low]
+
+providers:
+  cacheWarming: idle        # Anthropic caches expire in 5 minutes on API keys; omp re-warms only when the saved re-read beats the warm cost
+  cacheRetention: auto
+
+compaction:
+  enabled: true
+  thresholdTokens: 150000   # cached re-reads are cheap, but fresh tokens and output grow with context; keep it bounded
+  keepRecentTokens: 20000
+
+prewalk:
+  enabled: false
+advisor:
+  enabled: false
+
+enabledProviders: [claude]  # same ~/.claude CLAUDE.md, skills and plugins as the NaN profile
+defaultThinkingLevel: medium
+startup:
+  quiet: true

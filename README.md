@@ -2154,7 +2154,30 @@ ompqwen() { command omp -p --model nan/qwen3.8-flash --thinking high --max-time 
 
 At omp's measured mean of 155k tokens per task, 50 tasks a day is about 8M tokens; split 35 on glm and 15 on mimo that is roughly 160M glm and 70M mimo a month (8 and 7 percent of the pools), with deepseek reserved for planning. Rules that keep it there: new session per task, `--max-time` on headless runs, stop any small task past 20 turns, no gentle-shell persona or skills index for daily work.
 
-### 18.5 Known gaps
+### 18.5 Claude profile (`omp --profile claude`)
+
+oh-my-pi named profiles isolate settings, auth, sessions and caches under `~/.omp/profiles/<name>/agent`. The `claude` profile (vendored at `omp/profiles/claude/config.yml`) uses only Anthropic models, picked for result quality per dollar:
+
+| Role | Model | Why |
+|---|---|---|
+| `default` | Sonnet 5.5, medium effort | Everyday work; Sonnet 5.5's recalibrated effort scale puts medium at the agentic-coding sweet spot; $2 in / $10 out per MTok |
+| `plan` | Opus 5.5, high | Plan mode is short and judgment-heavy; $4 / $20 |
+| `slow` | Fable 5.1, high | Deliberate slot for the hardest problems only; $10 / $50 |
+| `task`, `smol`, `tiny`, `commit` | Sonnet 5.5, low | Subagents and fan-out: low effort means fewer, consolidated tool calls |
+| `advisor` | Opus 5.5, medium | Pre-wired; `advisor.enabled` stays off unless a high-risk session wants a second model watching |
+
+`Ctrl+P` cycles Sonnet, Opus, Fable. Fallback chains step one tier on a rate limit or overload and return on cooldown. Cache warming is left on (`idle`) here because Anthropic prompt caches expire after 5 minutes on API keys and omp only re-warms when the saved re-read is worth more than the warm; compaction triggers at 150k tokens.
+
+Rough cost per benchmark-sized task (about 6 calls, 85k tokens of which about 15 percent fresh input and 6 percent output, the rest cache reads): Sonnet about $0.10, Opus about $0.19, Fable about $0.47. Setup:
+
+```bash
+omp --profile claude          # creates ~/.omp/profiles/claude/agent on first use
+/login anthropic              # once, inside the profile: Claude subscription OAuth or an API key
+```
+
+Shell helper: `ompc() { command omp --profile claude "$@"; }`. Whether Anthropic's terms allow subscription OAuth tokens outside Claude Code is an account-level question; an API key is the unambiguous option.
+
+### 18.6 Known gaps
 
 - Claude PreToolUse guard hooks (destructive-command, markdown-approval, test-tamper) do not run in omp; port them as an omp extension before relying on YOLO approvals.
 - omp loads the Claude `context7` plugin MCP server and logs an HTTP 401 on every run (no key); harmless noise.

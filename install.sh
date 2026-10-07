@@ -256,7 +256,11 @@ for f in models.json settings.json; do
   backup "$HOME/.pi/agent/$f" "$REPO_DIR/pi/$f"
   cp "$REPO_DIR/pi/$f" "$HOME/.pi/agent/$f" && ok "pi $f"
 done
+mkdir -p "$HOME/.omp/profiles/claude/agent"
+backup "$HOME/.omp/profiles/claude/agent/config.yml" "$REPO_DIR/omp/profiles/claude/config.yml"
+cp "$REPO_DIR/omp/profiles/claude/config.yml" "$HOME/.omp/profiles/claude/agent/config.yml" && ok "omp profile 'claude' config.yml (Sonnet 5.5 / Opus 5.5 / Fable 5.1)"
 todo "oh-my-pi: with NAN_API_KEY exported run 'omp models nan' (3 models expected); agents are generated into ~/.omp/agent/agents by harness sync"
+todo "oh-my-pi Claude profile: run 'omp --profile claude' once and '/login anthropic' (OAuth or API key); the credential stays inside that profile"
 
 # ── Herdr: plugins + agent integrations (idempotent; each install checks its own state) ──
 if have herdr; then
