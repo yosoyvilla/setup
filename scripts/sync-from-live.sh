@@ -41,9 +41,9 @@ DRY_RUN=0
 PROTECTED="agents/airbyte.md skills/scalr-deploy/SKILL.md"
 
 # Repo dirs fully mirrored from staging (rsync --delete).
-MANAGED_DIRS="agents skills hooks agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts harness codex herdr"
+MANAGED_DIRS="agents skills hooks agents-skills opencode-agents opencode-commands opencode-plugins opencode-scripts harness codex herdr omp pi"
 # Managed dirs that may legitimately be absent on a machine without that tool (skipped, never deleted).
-OPTIONAL_DIRS="codex herdr"
+OPTIONAL_DIRS="codex herdr omp pi"
 is_optional(){ case " $OPTIONAL_DIRS " in *" $1 "*) return 0;; *) return 1;; esac; }
 # An optional tool's tree is staged all-or-nothing: `require_all <dir> <path>...` dies when the tool is present
 # but any expected file is missing, so a partial tree can never reach `rsync --delete` and remove committed files.
@@ -187,6 +187,24 @@ else
   warn "codex not configured here (~/.codex missing) — codex/ left as committed"
 fi
 
+# oh-my-pi and Pi on NaN: provider catalog + roles/settings verbatim (keys are env-var NAMES, never values).
+# Generated agents under ~/.omp/agent/agents come from ~/.harness and are not vendored twice.
+# Presence is the provider catalog, not the directory: harness sync creates ~/.omp/agent/agents on machines without omp.
+if [ -f "$LIVE_HOME/.omp/agent/models.yml" ]; then
+  stage_file "$LIVE_HOME/.omp/agent/config.yml" omp/config.yml
+  stage_file "$LIVE_HOME/.omp/agent/models.yml" omp/models.yml
+  require_all omp config.yml models.yml
+else
+  warn "oh-my-pi not configured here (~/.omp/agent/models.yml missing) — omp/ left as committed"
+fi
+if [ -f "$LIVE_HOME/.pi/agent/models.json" ]; then
+  stage_file "$LIVE_HOME/.pi/agent/models.json"   pi/models.json
+  stage_file "$LIVE_HOME/.pi/agent/settings.json" pi/settings.json
+  require_all pi models.json settings.json
+else
+  warn "pi not configured here (~/.pi/agent/models.json missing) — pi/ left as committed"
+fi
+
 # Herdr: manifests derived from live state (the plugin store and integration status),
 # consumed by install.sh via `herdr plugin install` / `herdr integration install`.
 if command -v herdr >/dev/null 2>&1; then
@@ -278,7 +296,7 @@ for f in "$STAGE"/config/claude-settings.json "$STAGE"/config/claude-settings.lo
          "$STAGE"/config/opencode.jsonc "$STAGE"/config/CLAUDE.md "$STAGE"/oh-my-openagent.json; do
   [ -f "$f" ] && templatize "$f"
 done
-for d in harness codex herdr; do
+for d in harness codex herdr omp pi; do
   [ -d "$STAGE/$d" ] || continue
   while IFS= read -r -d '' f; do templatize "$f"; done < <(find "$STAGE/$d" -type f -print0)
 done

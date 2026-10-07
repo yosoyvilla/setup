@@ -15,8 +15,8 @@ Then reload: `source ~/.zshrc`
 ## Secrets Reference
 
 ### NAN_API_KEY
-- **Used by:** opencode (`{env:NAN_API_KEY}` in `opencode.jsonc`)
-- **Purpose:** Access to NaN API — an OpenAI-compatible endpoint for deepseek-v4-flash, glm5.3-flash, mimo-v2.5, gemma4 and qwen3.6
+- **Used by:** opencode (`{env:NAN_API_KEY}` in `opencode.jsonc`), oh-my-pi (`apiKey: NAN_API_KEY` in `omp/models.yml`), Pi (`pi/models.json`)
+- **Purpose:** Access to NaN API — an OpenAI-compatible endpoint for deepseek-v4-flash, glm5.3-flash, mimo-v2.6-flash, qwen3.8-flash, gemma4 and qwen3.6 (monthly token pools per model; cached prompt tokens are billed in full; 7 parallel requests per key)
 - **Note:** exporting the value into the shell means tools that snapshot the environment (Codex shell snapshots, agent transcripts) can capture it;a Keychain-backed lookup is preferable to exporting it, to keep it out of environment snapshots
 - **Get it:** https://nan.builders — sign up and generate an API key from your account dashboard
 - **Set it:**

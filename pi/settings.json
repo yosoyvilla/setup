@@ -1,0 +1,8 @@
+{
+  "defaultProvider": "nan",
+  "defaultModel": "glm5.3-flash",
+  "defaultThinkingLevel": "high",
+  "cacheWarming": "off",
+  "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 },
+  "quietStartup": "header"
+}

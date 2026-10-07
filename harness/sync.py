@@ -10,6 +10,10 @@ TARGETS = {
     "claude":   HOME / ".claude",
     "opencode": HOME / ".config" / "opencode",
     "codex":    HOME / ".codex",
+    # oh-my-pi deliberately skips .claude/agents (its task-agent schema differs), so it gets its own
+    # generated copies. Claude model aliases become omp role aliases (resolved by modelRoles in
+    # ~/.omp/agent/config.yml); Claude tool names are not omp tool names, so `tools:` is dropped.
+    "omp":      HOME / ".omp" / "agent",
     # opencode loads skills from the SHARED dir, not from its own config dir. Generated opencode
     # agents reference skills by name, so any skill they cite must land here or the reference
     # dangles (caught live: networking cited confluent-networking, which opencode could not load).
@@ -39,6 +43,16 @@ def gen_md(a, tool):
         fm = "---\n" + ov.rstrip() + f"\n# {BANNER}\n---\n\n"
         return fm + a["body"].rstrip() + "\n"
     return yaml_frontmatter(a) + a["body"].rstrip() + "\n"
+
+OMP_ROLE = {"sonnet": "@default", "opus": "@slow", "haiku": "@smol"}
+
+def gen_omp_md(a):
+    """omp task agents: name + description required; model may be a role alias; no Claude tools list."""
+    out = ["---", f"name: {a['name']}", f"description: {a['description']}"]
+    role = OMP_ROLE.get(str(a.get("model", "")).lower())
+    if role: out.append(f'model: "{role}"')
+    out += [f"# {BANNER}", "---", ""]
+    return "\n".join(out) + a["body"].rstrip() + "\n"
 
 def toml_basic_string(s):
     """TOML basic string: escape backslash and double quote, collapse newlines."""
@@ -74,6 +88,8 @@ def main():
             if not want(a, tool): continue
             if tool == "codex":
                 r = write(root / "agents" / f"{a['name']}.toml", gen_toml(a), dry)
+            elif tool == "omp":
+                r = write(root / "agents" / f"{a['name']}.md", gen_omp_md(a), dry)
             else:
                 r = write(root / "agents" / f"{a['name']}.md", gen_md(a, tool), dry)
             counts[f"{tool}:{r}"] = counts.get(f"{tool}:{r}", 0) + 1

@@ -144,7 +144,7 @@ else ok "oh-my-zsh present"; fi
 [ "$SHELL" = "$(command -v zsh)" ] || todo "Set zsh as default shell: chsh -s \"\$(command -v zsh)\"  (log out/in after)"
 
 # ════════════════════════════════════════════════════════════════════
-# 6. AI tools: Claude Code, opencode, Codex CLI, Herdr, Engram
+# 6. AI tools: Claude Code, opencode, oh-my-pi, Pi, Codex CLI, Herdr, Engram
 # ════════════════════════════════════════════════════════════════════
 section "AI tools"
 # Claude Code — CLI install + all ~/.claude assets live in install-claude.sh
@@ -156,7 +156,14 @@ if ! have opencode; then
   if [ "$OS" = "macos" ]; then brew install anomalyco/tap/opencode >/dev/null 2>&1 && ok "opencode" || err "opencode";
   else curl -fsSL https://opencode.ai/install | bash >/dev/null 2>&1 && ok "opencode" || err "opencode"; fi
 else ok "opencode present"; fi
-# pi coding agent (npm; --ignore-scripts per pi's own install docs)
+# oh-my-pi (bun; NaN daily driver, see README section 18) and plain Pi (npm; optional single-model fallback)
+if ! have omp; then
+  if have bun; then bun install -g @oh-my-pi/pi-coding-agent >/dev/null 2>&1 && ok "oh-my-pi (omp)" || warn "oh-my-pi (bun install -g @oh-my-pi/pi-coding-agent)";
+  else warn "bun missing — install oh-my-pi with: curl -fsSL https://omp.sh/install | sh"; fi
+else ok "oh-my-pi present ($(omp --version 2>/dev/null))"; fi
+if ! have pi; then
+  npm install -g @earendil-works/pi-coding-agent >/dev/null 2>&1 && ok "pi" || warn "pi (npm install -g @earendil-works/pi-coding-agent)"
+else ok "pi present"; fi
 # Codex CLI (npm)
 if ! have codex; then
   npm install -g @openai/codex >/dev/null 2>&1 && ok "codex" || warn "codex (npm install -g @openai/codex)"
@@ -238,6 +245,18 @@ if [ -d "$HOME/.codex" ]; then
   sed "s#__HOME__#$HOME#g" "$REPO_DIR/codex/hooks.json" > "$HOME/.codex/hooks.json" && ok "codex hooks.json (Herdr re-adds its SessionStart entry below)"
   todo "Codex: run 'codex login' (ChatGPT/OpenAI account); plugins in config.toml install on first launch"
 fi
+
+# ── oh-my-pi + Pi on NaN (vendored under omp/ and pi/; README section 18) ────────────
+mkdir -p "$HOME/.omp/agent" "$HOME/.pi/agent"
+for f in config.yml models.yml; do
+  backup "$HOME/.omp/agent/$f" "$REPO_DIR/omp/$f"
+  cp "$REPO_DIR/omp/$f" "$HOME/.omp/agent/$f" && ok "omp $f"
+done
+for f in models.json settings.json; do
+  backup "$HOME/.pi/agent/$f" "$REPO_DIR/pi/$f"
+  cp "$REPO_DIR/pi/$f" "$HOME/.pi/agent/$f" && ok "pi $f"
+done
+todo "oh-my-pi: with NAN_API_KEY exported run 'omp models nan' (3 models expected); agents are generated into ~/.omp/agent/agents by harness sync"
 
 # ── Herdr: plugins + agent integrations (idempotent; each install checks its own state) ──
 if have herdr; then

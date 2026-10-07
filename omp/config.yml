@@ -1,0 +1,41 @@
+# ~/.omp/agent/config.yml -- oh-my-pi on NaN, quota-aware. Measured in the 2026-10-06 sandbox benchmark (see README section 18).
+# Working model: glm5.3-flash (best correctness per token, 2B pool).
+# Routine/overflow pool: mimo-v2.6-flash (1B pool; matches glm on everyday tasks, slower).
+# Deep reasoning only: deepseek-v4-flash (3B pool, already the most consumed; use deliberately via plan/slow).
+modelRoles:
+  default: nan/glm5.3-flash:high
+  plan:    nan/deepseek-v4-flash:high
+  slow:    nan/deepseek-v4-flash:high
+  task:    nan/mimo-v2.6-flash:medium   # subagents the orchestrator chooses to spawn
+  smol:    nan/mimo-v2.6-flash:medium   # cheap fan-out role; Ctrl+P second slot
+  tiny:    nan/mimo-v2.6-flash:low      # small internal calls
+  commit:  nan/mimo-v2.6-flash:low      # commit messages / changelogs
+cycleOrder: [default, smol, slow]        # Ctrl+P: glm -> mimo -> deepseek
+
+retry:
+  enabled: true
+  modelFallback: true
+  fallbackRevertPolicy: cooldown-expiry  # go back to the primary once its 429/quota window clears
+  fallbackChains:                        # NaN: 7 parallel requests per key; a 429 moves the turn to another pool
+    default: [nan/mimo-v2.6-flash:high]
+    slow:    [nan/glm5.3-flash:high]
+    smol:    [nan/glm5.3-flash:low]
+    task:    [nan/glm5.3-flash:low]
+
+compaction:
+  enabled: true
+  thresholdTokens: 120000   # every call re-bills the whole context on NaN; keep live context bounded
+  keepRecentTokens: 20000
+
+prewalk:
+  enabled: false            # measured: hands the verification loop to the cheap model; costs more, passes less
+advisor:
+  enabled: false            # measured: doubles paid tokens, no correctness gain on NaN models
+
+providers:
+  cacheWarming: off         # warming replays the last request; NaN bills cached tokens in full, so it is pure cost
+
+enabledProviders: [claude]  # load ~/.claude CLAUDE.md, skills and plugins natively
+defaultThinkingLevel: high
+startup:
+  quiet: true
